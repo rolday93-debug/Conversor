@@ -1,0 +1,7 @@
+# Archivos y carpetas del sistema
+.DS_Store
+Thumbs.db
+
+# Dependencias o archivos temporales que puedan generarse
+node_modules/
+*.log
