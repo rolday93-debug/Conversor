@@ -3,73 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conversor Word a HTML</title>
+    <title>Conversor Word a HTML Profesional</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/estilos.css">
     <script src="libs/sweetalert2.all.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>📄 Convertir Word (.docx) a HTML</h1>
-        
-        <div class="upload-area">
-            <input type="file" id="inputWord" accept=".docx">
-            <button id="convertirBtn">Convertir a HTML</button>
+        <header class="app-header">
+            <div class="logo-area">
+                <span class="logo-icon">📄</span>
+                <div>
+                    <h1>Conversor Word a HTML</h1>
+                    <p class="subtitle">Convierte, edita y exporta documentos profesionales</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-zone">
+                <div class="upload-icon">📎</div>
+                <h3>Arrastra tu archivo .docx aquí</h3>
+                <p>o selecciona un archivo desde tu dispositivo</p>
+                <input type="file" id="inputWord" accept=".docx">
+                <button id="convertirBtn" class="btn-primary">
+                    <span class="btn-icon">⚡</span> Convertir a HTML
+                </button>
+            </div>
         </div>
 
         <div id="resultado" style="display: none;">
-            <div class="tabs">
-                <button class="tab-btn active" data-tab="vista">Vista Previa</button>
+            <!-- Barra de herramientas de edición -->
+<div id="barraHerramientas" style="display: none;">
+    <!-- Pestañas principales -->
+    <div class="toolbar-tabs">
+        <button class="tab-btn-toolbar active" data-tab="formato">Formato</button>
+        <button class="tab-btn-toolbar" data-tab="insertar">Insertar</button>
+        <button class="tab-btn-toolbar" data-tab="referencias">Referencias</button>
+    </div>
+
+    <!-- Pestaña: Formato -->
+    <div class="tab-content-toolbar active" id="tab-formato">
+        <div class="toolbar-group">
+            <span class="toolbar-label">Fuente</span>
+            <select id="fuenteSelect">
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Arial">Arial</option>
+                <option value="Courier New">Courier New</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Calibri">Calibri</option>
+                <option value="Segoe UI">Segoe UI</option>
+                <option value="Crimson Text">Crimson Text</option>
+            </select>
+            <select id="tamanoSelect">
+                <option value="1">10px</option>
+                <option value="2">13px</option>
+                <option value="3">16px</option>
+                <option value="4">18px</option>
+                <option value="5">24px</option>
+                <option value="6">32px</option>
+                <option value="7">48px</option>
+            </select>
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-group">
+            <span class="toolbar-label">Estilo</span>
+            <button type="button" class="tool-btn" data-cmd="bold"><b>B</b></button>
+            <button type="button" class="tool-btn" data-cmd="italic"><i>I</i></button>
+            <button type="button" class="tool-btn" data-cmd="underline"><u>U</u></button>
+            <button type="button" class="tool-btn" data-cmd="strikeThrough"><s>S</s></button>
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-group">
+            <span class="toolbar-label">Alinear</span>
+            <button type="button" class="tool-btn" data-cmd="justifyLeft">⬅️</button>
+            <button type="button" class="tool-btn" data-cmd="justifyCenter">⬌</button>
+            <button type="button" class="tool-btn" data-cmd="justifyRight">➡️</button>
+            <button type="button" class="tool-btn" data-cmd="justifyFull">☰</button>
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-group">
+            <span class="toolbar-label">Listas</span>
+            <button type="button" class="tool-btn" data-cmd="insertUnorderedList">•</button>
+            <button type="button" class="tool-btn" data-cmd="insertOrderedList">1.</button>
+            <button type="button" class="tool-btn" data-cmd="outdent">←</button>
+            <button type="button" class="tool-btn" data-cmd="indent">→</button>
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-group">
+            <span class="toolbar-label">Color</span>
+            <button type="button" id="colorBtn" class="tool-btn">🎨</button>
+            <input type="color" id="colorPicker" value="#000000">
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-group">
+            <span class="toolbar-label">Recuadro</span>
+            <button type="button" id="recuadroBtn" class="tool-btn">🔲</button>
+            <button type="button" id="quitarRecuadroBtn" class="tool-btn danger">❌</button>
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-group">
+            <button type="button" class="tool-btn" data-cmd="removeFormat">🗑️ Limpiar</button>
+            <button type="button" class="tool-btn" data-cmd="undo">↩️</button>
+            <button type="button" class="tool-btn" data-cmd="redo">↪️</button>
+        </div>
+    </div>
+
+    <!-- Pestaña: Insertar -->
+    <div class="tab-content-toolbar" id="tab-insertar">
+        <div class="toolbar-group">
+            <button type="button" id="insertarImagenBtn" class="tool-btn accent">🖼️ Imagen</button>
+            <button type="button" id="insertarTablaBtn" class="tool-btn accent">📊 Tabla</button>
+            <button type="button" id="insertarEnlaceBtn" class="tool-btn">🔗 Enlace</button>
+            <button type="button" id="anadirLogoBtn" class="tool-btn">🏷️ Logo</button>
+        </div>
+        <div class="toolbar-divider"></div>
+        <div class="toolbar-group">
+            <span class="toolbar-label">Tabla</span>
+            <button type="button" id="combinarSeleccionBtn" class="tool-btn">🔗 Combinar</button>
+            <button type="button" id="eliminarCeldaBtn" class="tool-btn danger">❌ Celda</button>
+            <button type="button" id="eliminarFilaBtn" class="tool-btn danger">📄 Fila</button>
+            <button type="button" id="eliminarColumnaBtn" class="tool-btn danger">📊 Columna</button>
+        </div>
+        <div class="toolbar-group" style="margin-left: auto;">
+            <div id="controlesLogo" style="display: none;">
+                <label>Tamaño: <input type="range" id="logoTamano" min="10" max="300" value="80"></label>
+                <label>Opacidad: <input type="range" id="logoOpacidad" min="0" max="1" step="0.05" value="1"></label>
+                <button id="aplicarLogoBtn" class="tool-btn mini">Aplicar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pestaña: Referencias -->
+    <div class="tab-content-toolbar" id="tab-referencias">
+        <div class="toolbar-group">
+            <button type="button" id="sangriaFrancesaBtn" class="tool-btn">📑 Sangría francesa</button>
+            <button type="button" id="sangriaNormalBtn" class="tool-btn">📝 Sangría normal</button>
+            <button type="button" id="numerarReferenciasBtn" class="tool-btn">🔢 Numerar</button>
+            <button type="button" id="estiloAPABtn" class="tool-btn">📖 Estilo APA</button>
+        </div>
+    </div>
+</div>            
+            <div class="editor-container">
+                <div id="vistaPrevia"></div>
             </div>
 
-<div id="tab-vista" class="tab-content active">
-    <div id="barraHerramientas" style="display: none; background: #f8f9fa; padding: 8px; border-bottom: 2px solid #ddd; margin-bottom: 10px; flex-wrap: wrap; gap: 4px;">
-    <span style="font-weight:bold;">Estilo:</span>
-    <select id="fuenteSelect" title="Tipo de letra">
-        <option value="Times New Roman">Times New Roman</option>
-        <option value="Arial">Arial</option>
-        <option value="Courier New">Courier New</option>
-        <option value="Georgia">Georgia</option>
-        <option value="Verdana">Verdana</option>
-    </select>
-    <select id="tamanoSelect" title="Tamaño">
-        <option value="1">10px</option>
-        <option value="2">12px</option>
-        <option value="3">14px</option>
-        <option value="4">16px</option>
-        <option value="5">18px</option>
-        <option value="6">24px</option>
-    </select>
-    <button type="button" class="tool-btn" data-cmd="bold" title="Negrita"><b>N</b></button>
-    <button type="button" class="tool-btn" data-cmd="italic" title="Cursiva"><i>C</i></button>
-    <button type="button" class="tool-btn" data-cmd="underline" title="Subrayado"><u>S</u></button>
-    <span style="margin:0 4px">|</span>
-    <button type="button" class="tool-btn" data-cmd="justifyLeft" title="Izquierda">⬅️</button>
-    <button type="button" class="tool-btn" data-cmd="justifyCenter" title="Centro">⬌</button>
-    <button type="button" class="tool-btn" data-cmd="justifyRight" title="Derecha">➡️</button>
-    <button type="button" class="tool-btn" data-cmd="justifyFull" title="Justificar">☰</button>
-    <span style="margin:0 4px">|</span>
-    <button type="button" id="insertarImagenBtn" title="Insertar imagen">🖼️ Imagen</button>
-    <button type="button" id="anadirLogoBtn" title="Añadir logotipo de revista">🏷️ Logo</button>
-<div id="controlesLogo" style="display: none; background: white; padding: 5px 10px; border-radius: 40px; gap: 10px;">
-    <label>Tamaño: <input type="range" id="logoTamano" min="10" max="200" value="80"></label>
-    <label>Opacidad: <input type="range" id="logoOpacidad" min="0" max="1" step="0.05" value="1"></label>
-    <button id="aplicarLogoBtn">Aplicar</button>
-</div>
-    <button type="button" class="tool-btn" data-cmd="removeFormat" title="Limpiar formato">🗑️</button>
-</div>
-    <div id="vistaPrevia"></div>
-</div>
-
             <div class="acciones">
-                 <div class="nombre-archivo">
-        <label for="nombreArchivo">Nombre del archivo HTML:</label>
-        <input type="text" id="nombreArchivo" placeholder="mi_articulo_convertido" style="padding: 0.4rem 0.8rem; border-radius: 40px; border: 1px solid #cbd5e1; font-family: inherit;">
-        <span>.html</span>
-    </div>
-               <button id="editarBtn">✏️ Editar vista previa</button>
-               <button id="guardarEdicionBtn" style="display:none;">💾 Guardar cambios</button>
-               <button id="descargarBtn">⬇️ Descargar HTML</button>
-               <button id="descargarZipBtn" style="display:none;">⬇️ Descargar HTML + Imágenes (ZIP)</button>
+                <div class="nombre-archivo">
+                    <label for="nombreArchivo">Nombre del archivo:</label>
+                    <input type="text" id="nombreArchivo" placeholder="mi_articulo">
+                    <span class="extension">.html</span>
+                </div>
+                <div class="action-buttons">
+                    <button id="editarBtn" class="btn-edit">✏️ Editar documento</button>
+                    <button id="guardarEdicionBtn" style="display:none;" class="btn-save">💾 Guardar cambios</button>
+                    <button id="descargarBtn" class="btn-download">⬇️ Descargar HTML</button>
+                    <button id="descargarZipBtn" style="display:none;" class="btn-download-zip">⬇️ Descargar ZIP</button>
+                </div>
             </div>
         </div>
     </div>
