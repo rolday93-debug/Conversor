@@ -258,18 +258,24 @@ function generarDocumentoCompleto(contenidoMejorado, tituloPersonalizado) {
             border-image-slice: 1;
         }
         .documento-titulo {
-    font-family: 'Georgia', 'Times New Roman', serif;
-    font-size: 1.3rem;
-    font-weight: 600;
-    letter-spacing: -0.3px;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    color: #0f172a;
-}
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: #0f172a;
+        }
         .documento-contenido { padding: 2rem 2.5rem; }
         .documento-footer { background: #f8fafc; padding: 1rem 2rem; text-align: center; font-size: 0.75rem; color: #64748b; border-top: 1px solid #e2e8f0; }
+        
+        /* Sin espacios extra entre párrafos – respeta la edición del usuario */
+        .documento-contenido p {
+            margin: 0;
+            text-align: justify;
+        }
         
         /* Sangría para listas */
         .documento-contenido ul,
