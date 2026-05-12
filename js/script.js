@@ -905,6 +905,7 @@ function habilitarEdicion() {
     document.getElementById('insertarEnlaceBtn').onclick = insertarEnlace;
     document.getElementById('anadirLogoBtn').onclick = anadirLogo;
     document.getElementById('aplicarLogoBtn').onclick = aplicarControlesLogo;
+    document.getElementById('insertarLineaBtn').onclick = insertarLineaDecorativa;
     document.getElementById('combinarSeleccionBtn').onclick = combinarCeldasSeleccionadas;
     document.getElementById('eliminarCeldaBtn').onclick = eliminarCelda;
     document.getElementById('eliminarFilaBtn').onclick = eliminarFila;
@@ -1078,6 +1079,126 @@ function inicializarPestanasBarra() {
         });
     });
 }
+
+async function insertarLineaDecorativa() {
+    const contenido = obtenerContenidoEditable();
+    if (!contenido || contenido.contentEditable !== 'true') {
+        Swal.fire({ icon: 'warning', title: 'Modo edición requerido', text: 'Activa el modo edición antes de insertar una línea.', confirmButtonColor: '#f59e0b' });
+        return;
+    }
+    contenido.focus();
+
+    let color = '#3b82f6';
+    let grosor = 2;
+    let estilo = 'solid';
+    let ancho = 100;
+    let margenVertical = 1.5;
+
+    const { value: formValues } = await Swal.fire({
+        title: 'Personalizar línea decorativa',
+        html: `
+            <div style="text-align: left; display: flex; flex-direction: column; gap: 10px;">
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Color:</span>
+                    <input type="color" id="linea-color" value="${color}">
+                </label>
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Grosor (px):</span>
+                    <input type="range" id="linea-grosor" min="1" max="12" value="${grosor}">
+                    <span id="grosor-valor">${grosor}px</span>
+                </label>
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Estilo:</span>
+                    <select id="linea-estilo">
+                        <option value="solid">Sólida</option>
+                        <option value="dashed">Discontinua (---)</option>
+                        <option value="dotted">Punteada (...)</option>
+                        <option value="double">Doble</option>
+                        <option value="groove">Grabada</option>
+                        <option value="ridge">Relieve</option>
+                    </select>
+                </label>
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Ancho (%):</span>
+                    <input type="range" id="linea-ancho" min="30" max="100" step="5" value="${ancho}">
+                    <span id="ancho-valor">${ancho}%</span>
+                </label>
+                <label style="display: flex; justify-content: space-between;">
+                    <span>Margen vertical (rem):</span>
+                    <input type="range" id="linea-margen" min="0" max="3" step="0.25" value="${margenVertical}">
+                    <span id="margen-valor">${margenVertical}rem</span>
+                </label>
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Insertar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#3b82f6',
+        cancelButtonColor: '#6c757d',
+        didOpen: () => {
+            const grosorSlider = document.getElementById('linea-grosor');
+            const anchoSlider = document.getElementById('linea-ancho');
+            const margenSlider = document.getElementById('linea-margen');
+            const grosorVal = document.getElementById('grosor-valor');
+            const anchoVal = document.getElementById('ancho-valor');
+            const margenVal = document.getElementById('margen-valor');
+            const estiloSelect = document.getElementById('linea-estilo');
+    
+            function actualizarGrosorMinimo() {
+                const estilo = estiloSelect.value;
+                const grosorActual = parseInt(grosorSlider.value);
+                let minimo = 1;
+                if (estilo === 'double' || estilo === 'groove' || estilo === 'ridge') {
+                    minimo = 3;
+                }
+                grosorSlider.min = minimo;
+                if (grosorActual < minimo) {
+                    grosorSlider.value = minimo;
+                    grosorVal.innerText = minimo + 'px';
+                }
+            }
+    
+            grosorSlider.oninput = () => grosorVal.innerText = grosorSlider.value + 'px';
+            anchoSlider.oninput = () => anchoVal.innerText = anchoSlider.value + '%';
+            margenSlider.oninput = () => margenVal.innerText = margenSlider.value + 'rem';
+            estiloSelect.onchange = () => actualizarGrosorMinimo();
+            actualizarGrosorMinimo();
+        },
+        preConfirm: () => {
+            const estilo = document.getElementById('linea-estilo').value;
+            let grosor = parseInt(document.getElementById('linea-grosor').value);
+            // Asegurar grosor mínimo para estilos que lo necesitan
+            if ((estilo === 'double' || estilo === 'groove' || estilo === 'ridge') && grosor < 3) {
+                grosor = 3;
+            }
+            return {
+                color: document.getElementById('linea-color').value,
+                grosor: grosor,
+                estilo: estilo,
+                ancho: parseInt(document.getElementById('linea-ancho').value),
+                margen: parseFloat(document.getElementById('linea-margen').value)
+            };
+        }
+    });
+
+    if (!formValues) return;
+
+    // Construir la línea con border-top para todos los estilos (así es más universal)
+    // Para sólido, además podemos añadir border-radius si se desea (opcional)
+    const borderRadius = (formValues.estilo === 'solid') ? `border-radius: ${formValues.grosor}px;` : '';
+    const lineaHtml = `<hr class="linea-decorativa" style="
+        display: block;
+        width: ${formValues.ancho}%;
+        margin: ${formValues.margen}rem auto;
+        border: none;
+        border-top: ${formValues.grosor}px ${formValues.estilo} ${formValues.color};
+        ${borderRadius}
+    ">`;
+    
+    document.execCommand('insertHTML', false, lineaHtml);
+    Swal.fire({ icon: 'success', title: 'Línea insertada', timer: 1200, showConfirmButton: false });
+}
 // ============================================================
 // EVENTO PRINCIPAL
 // ============================================================
@@ -1099,7 +1220,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     document.getElementById('editarBtn').addEventListener('click', habilitarEdicion);
     document.getElementById('guardarEdicionBtn').addEventListener('click', guardarEdicion);
     convertirBtn.addEventListener('click', function() {

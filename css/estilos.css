@@ -491,14 +491,7 @@ button {
 }
 
 /* ========== AGRUPACIÓN DE AUTORES (solo contenedor, sin estilos de texto) ========== */
-.grupo-autores,
-.grupo-afiliaciones {
-    background: #f8fafc;
-    border-radius: 16px;
-    padding: 12px 20px;
-    margin: 0.75em 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
+
 .grupo-afiliaciones {
     background: #f1f5f9;
 }
@@ -690,4 +683,11 @@ button {
 }
 #seleccionarArchivoBtn {
     margin-bottom: 1.5rem;
+}
+/* Línea decorativa insertada por el usuario */
+.linea-decorativa {
+    display: block;
+    width: 100%;
+    margin: 1.5rem 0;
+    border: none;
 }
