@@ -699,3 +699,10 @@ button {
     background: #fef2f2;
     border-color: #fecaca;
 }
+
+.upload-zone.drag-over {
+    border-color: #3b82f6;
+    background: #eff6ff;
+    transform: scale(1.02);
+    transition: all 0.2s;
+}

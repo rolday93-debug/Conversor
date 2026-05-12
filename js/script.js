@@ -240,6 +240,61 @@ function mejorarEstructuraHTML(htmlFragment) {
     return htmlResultado;
 }
 
+function initDragAndDrop() {
+    const dropZone = document.querySelector('.upload-zone');
+    if (!dropZone) return;
+
+    // Prevenir comportamiento por defecto del navegador para eventos de arrastre
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    });
+
+    // Resaltar zona al arrastrar
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.add('drag-over');
+        });
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.remove('drag-over');
+        });
+    });
+
+    // Capturar el archivo soltado
+    dropZone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.name.endsWith('.docx')) {
+                const fileInput = document.getElementById('inputWord');
+                // Asignar el archivo al input
+                fileInput.files = files;
+                // Actualizar el texto del span con el nombre
+                const fileNameSpan = document.getElementById('nombreArchivoSeleccionado');
+                if (fileNameSpan) fileNameSpan.textContent = file.name;
+                // Mensaje de éxito
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Archivo cargado',
+                    text: `${file.name} listo para convertir`,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Formato incorrecto',
+                    text: 'Solo se permiten archivos .docx',
+                    confirmButtonColor: '#ef4444'
+                });
+            }
+        }
+    });
+}
 // ============================================================
 // GENERAR DOCUMENTO HTML COMPLETO PARA EXPORTAR (sin estilos fijos)
 // ============================================================
@@ -1280,6 +1335,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const convertirBtn = document.getElementById('convertirBtn');
     const fileInput = document.getElementById('inputWord');
     const resultadoDiv = document.getElementById('resultado');
+    initDragAndDrop();
     const selectBtn = document.getElementById('seleccionarArchivoBtn');
     const fileNameSpan = document.getElementById('nombreArchivoSeleccionado');
     if (selectBtn && fileInput && fileNameSpan) {
