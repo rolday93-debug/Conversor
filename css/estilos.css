@@ -691,3 +691,11 @@ button {
     margin: 1.5rem 0;
     border: none;
 }
+
+.tool-btn.danger {
+    color: #dc2626;
+}
+.tool-btn.danger:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+}

@@ -906,6 +906,7 @@ function habilitarEdicion() {
     document.getElementById('anadirLogoBtn').onclick = anadirLogo;
     document.getElementById('aplicarLogoBtn').onclick = aplicarControlesLogo;
     document.getElementById('insertarLineaBtn').onclick = insertarLineaDecorativa;
+    document.getElementById('eliminarLineaBtn').onclick = eliminarLineaCercana;
     document.getElementById('combinarSeleccionBtn').onclick = combinarCeldasSeleccionadas;
     document.getElementById('eliminarCeldaBtn').onclick = eliminarCelda;
     document.getElementById('eliminarFilaBtn').onclick = eliminarFila;
@@ -1198,6 +1199,73 @@ async function insertarLineaDecorativa() {
     
     document.execCommand('insertHTML', false, lineaHtml);
     Swal.fire({ icon: 'success', title: 'Línea insertada', timer: 1200, showConfirmButton: false });
+}
+
+function eliminarLineaCercana() {
+    const contenido = obtenerContenidoEditable();
+    if (!contenido || contenido.contentEditable !== 'true') {
+        Swal.fire({ icon: 'warning', title: 'Modo edición requerido', text: 'Activa el modo edición antes de eliminar una línea.', confirmButtonColor: '#f59e0b' });
+        return;
+    }
+    
+    // 1. Obtener la selección actual
+    const selection = window.getSelection();
+    let elementoAEliminar = null;
+    
+    if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        let node = range.commonAncestorContainer;
+        if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+        // Verificar si el elemento seleccionado es una línea (o está dentro de una)
+        elementoAEliminar = node.closest('.linea-decorativa');
+        if (!elementoAEliminar && node.tagName === 'HR' && node.classList.contains('linea-decorativa')) {
+            elementoAEliminar = node;
+        }
+    }
+    
+    // 2. Si no se encontró en la selección, buscar la línea más cercana al cursor
+    if (!elementoAEliminar && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const x = rect.left + (rect.width / 2);
+        const y = rect.top + (rect.height / 2);
+        const elementosEnPosicion = document.elementsFromPoint(x, y);
+        for (let el of elementosEnPosicion) {
+            if (el.classList && el.classList.contains('linea-decorativa')) {
+                elementoAEliminar = el;
+                break;
+            }
+        }
+    }
+    
+    // 3. Si aún no, buscar en el contenido cualquier línea y eliminarla (peligroso, mejor preguntar)
+    if (!elementoAEliminar) {
+        // Buscar la primera línea en el contenido
+        const primeraLinea = contenido.querySelector('.linea-decorativa');
+        if (primeraLinea) {
+            Swal.fire({
+                title: '¿Eliminar la primera línea del documento?',
+                text: 'No se encontró ninguna línea cerca del cursor. ¿Deseas eliminar la primera línea encontrada?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then(result => {
+                if (result.isConfirmed) {
+                    primeraLinea.remove();
+                    Swal.fire({ icon: 'success', title: 'Línea eliminada', timer: 1200, showConfirmButton: false });
+                }
+            });
+            return;
+        } else {
+            Swal.fire({ icon: 'info', title: 'No hay líneas', text: 'No se encontró ninguna línea decorativa en el documento.', confirmButtonColor: '#3b82f6' });
+            return;
+        }
+    }
+    
+    // Eliminar la línea encontrada
+    elementoAEliminar.remove();
+    Swal.fire({ icon: 'success', title: 'Línea eliminada', timer: 1200, showConfirmButton: false });
 }
 // ============================================================
 // EVENTO PRINCIPAL
