@@ -669,3 +669,25 @@ button {
 .tab-content-toolbar.active {
     display: flex;
 }
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+    border-radius: 40px;
+    padding: 0.6rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.btn-secondary:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+}
+.file-name {
+    margin-left: 1rem;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+#seleccionarArchivoBtn {
+    margin-bottom: 1.5rem;
+}

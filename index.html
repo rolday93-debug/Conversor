@@ -26,7 +26,11 @@
                 <div class="upload-icon">📎</div>
                 <h3>Arrastra tu archivo .docx aquí</h3>
                 <p>o selecciona un archivo desde tu dispositivo</p>
-                <input type="file" id="inputWord" accept=".docx">
+                <div class="file-input-wrapper">
+    <button id="seleccionarArchivoBtn" class="btn-secondary" type="button">📂 Seleccionar archivo</button>
+    <span id="nombreArchivoSeleccionado" class="file-name">Ningún archivo seleccionado</span>
+</div>
+<input type="file" id="inputWord" accept=".docx" style="display: none;">
                 <button id="convertirBtn" class="btn-primary">
                     <span class="btn-icon">⚡</span> Convertir a HTML
                 </button>

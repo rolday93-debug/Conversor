@@ -1085,6 +1085,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const convertirBtn = document.getElementById('convertirBtn');
     const fileInput = document.getElementById('inputWord');
     const resultadoDiv = document.getElementById('resultado');
+    const selectBtn = document.getElementById('seleccionarArchivoBtn');
+    const fileNameSpan = document.getElementById('nombreArchivoSeleccionado');
+    if (selectBtn && fileInput && fileNameSpan) {
+        selectBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (fileInput.files.length > 0) {
+                fileNameSpan.textContent = fileInput.files[0].name;
+            } else {
+                fileNameSpan.textContent = 'Ningún archivo seleccionado';
+            }
+        });
+    }
+    
     document.getElementById('editarBtn').addEventListener('click', habilitarEdicion);
     document.getElementById('guardarEdicionBtn').addEventListener('click', guardarEdicion);
     convertirBtn.addEventListener('click', function() {
