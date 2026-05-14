@@ -64,7 +64,6 @@ function crearConvertidorImagenes() {
             });
     });
 }
-
 // ============================================================
 // LIMPIEZA DE NEGRITAS Y ESTILOS FIJOS EN RESUMEN (opcional)
 // ============================================================
@@ -347,8 +346,27 @@ function generarDocumentoCompleto(contenidoMejorado, tituloPersonalizado) {
         .tabla-con-bordes { border-collapse: collapse; width: 100%; margin: 1.5em 0; border: 1px solid #e2e8f0; }
         .tabla-con-bordes th, .tabla-con-bordes td { border: 1px solid #e2e8f0; padding: 8px 12px; vertical-align: top; }
         .tabla-con-bordes th { background-color: #f8fafc; font-weight: 600; }
-        .documento-contenido img { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin: 1rem auto; display: block; }
-        
+
+/* Imágenes normales (convertidas desde Word o insertadas manualmente) */
+.documento-contenido img:not(.icono-insertado) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin: 1rem auto;
+    display: block;
+}
+
+/* Iconos insertados (en línea) */
+.documento-contenido .icono-insertado {
+    display: inline-block;
+    vertical-align: middle;
+    max-width: 32px;
+    max-height: 32px;
+    width: auto;
+    height: auto;
+    margin: 0 2px;
+}        
         /* Márgenes para secciones */
         .tipo-articulo { margin: 0.5em 0 0.5em 0; }
         h1, .documento-titulo { margin: 1em 0 0.5em 0; }
@@ -497,13 +515,55 @@ function aplicarTamañoABloques(sizePx) {
 
 // Aplicar alineación a todos los bloques seleccionados
 function aplicarAlineacionTexto(align) {
-    const bloques = obtenerBloquesSeleccionados();
+    const selection = window.getSelection();
+    const contenido = obtenerContenidoEditable();
+    if (!contenido) return;
+
+    let bloques = new Set();
+
+    if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        // Si la selección está colapsada (solo cursor), obtener el bloque del cursor
+        if (selection.isCollapsed) {
+            let node = range.startContainer;
+            if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+            let bloque = node.closest('p, h1, h2, h3, h4, h5, h6, div, li, td, th');
+            if (bloque && bloque !== contenido) bloques.add(bloque);
+        } else {
+            // Selección expandida: recorrer nodos elemento que intersectan el rango
+            const walker = document.createTreeWalker(
+                range.commonAncestorContainer,
+                NodeFilter.SHOW_ELEMENT,
+                {
+                    acceptNode: function(node) {
+                        if (node === contenido) return NodeFilter.FILTER_SKIP;
+                        if (range.intersectsNode(node)) {
+                            let bloque = node.closest('p, h1, h2, h3, h4, h5, h6, div, li, td, th');
+                            if (bloque && bloque !== contenido) bloques.add(bloque);
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        return NodeFilter.FILTER_SKIP;
+                    }
+                }
+            );
+            while (walker.nextNode()) {}
+        }
+    }
+
     if (bloques.size > 0) {
+        // Aplicar alineación a cada bloque
         bloques.forEach(bloque => {
             bloque.style.textAlign = align;
         });
     } else {
-        document.execCommand(`justify${align.charAt(0).toUpperCase() + align.slice(1)}`, false, null);
+        // Fallback: usar execCommand (útil para justificar cuando no se detecta bloque)
+        try {
+            let cmd = `justify${align.charAt(0).toUpperCase() + align.slice(1)}`;
+            if (align === 'justify') cmd = 'justifyFull';
+            document.execCommand(cmd, false, null);
+        } catch(e) {
+            console.warn('Error al aplicar alineación con execCommand', e);
+        }
     }
 }
 
@@ -830,16 +890,23 @@ function insertarImagenManual() {
     };
     input.click();
 }
+
 function seleccionarImagen(img) {
-    if (imagenSeleccionada) imagenSeleccionada.classList.remove('img-seleccionada');
+    if (imagenSeleccionada) {
+        imagenSeleccionada.classList.remove('img-seleccionada');
+        eliminarResizers();
+    }
     imagenSeleccionada = img;
     img.classList.add('img-seleccionada');
+    crearResizers(img);
+    
     const selection = window.getSelection();
     const range = document.createRange();
     range.selectNode(img);
     selection.removeAllRanges();
     selection.addRange(range);
 }
+
 function addDragHandlers(img) {
     if (!img || img.hasAttribute('data-draggable')) return;
     img.setAttribute('data-draggable', 'true');
@@ -873,6 +940,68 @@ function habilitarDragAndDrop() {
     observerImagenes.observe(contenido, { childList: true, subtree: true });
 }
 
+function insertarIcono() {
+    const contenido = obtenerContenidoEditable();
+    if (!contenido || contenido.contentEditable !== 'true') {
+        Swal.fire({ icon: 'warning', title: 'Modo edición requerido', text: 'Activa el modo edición antes de insertar un icono.', confirmButtonColor: '#f59e0b' });
+        return;
+    }
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png, image/x-icon, image/jpeg, image/svg+xml, image/gif';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const base64 = ev.target.result;
+            contenido.focus();
+            // Insertar icono con estilo inline-block y tamaño fijo
+            const imgHtml = `<img src="${base64}" class="icono-insertado" style="display: inline-block; max-width: 32px; max-height: 32px; width: auto; height: auto; vertical-align: middle; margin: 0 2px;" alt="Icono">`;
+            document.execCommand('insertHTML', false, imgHtml);
+            // Añadir manejadores
+            const nuevoIcono = contenido.querySelector('img:last-of-type');
+            if (nuevoIcono) {
+                addDragHandlers(nuevoIcono);
+                nuevoIcono.addEventListener('click', (e) => {
+                    if (modoEdicion) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        seleccionarImagen(nuevoIcono);
+                    }
+                });
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+}
+
+function eliminarIconoCercano() {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) {
+        Swal.fire({ icon: 'info', title: 'Selecciona un icono', text: 'Coloca el cursor sobre un icono y vuelve a intentar.', confirmButtonColor: '#3b82f6' });
+        return;
+    }
+    const range = selection.getRangeAt(0);
+    let node = range.commonAncestorContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    // Buscar si el nodo actual o su padre es un icono (img con clase icono-insertado)
+    let icono = null;
+    if (node.tagName === 'IMG' && node.classList.contains('icono-insertado')) {
+        icono = node;
+    } else {
+        icono = node.querySelector('.icono-insertado');
+        if (!icono && node.parentElement) icono = node.parentElement.querySelector('.icono-insertado');
+    }
+    if (icono) {
+        icono.remove();
+        Swal.fire({ icon: 'success', title: 'Icono eliminado', timer: 1200, showConfirmButton: false });
+    } else {
+        Swal.fire({ icon: 'info', title: 'No se encontró icono', text: 'Asegúrate de tener el cursor cerca de un icono o selecciónalo.', confirmButtonColor: '#3b82f6' });
+    }
+}
 // ============================================================
 // LOGOTIPO
 // ============================================================
@@ -968,6 +1097,8 @@ function habilitarEdicion() {
     document.getElementById('aplicarLogoBtn').onclick = aplicarControlesLogo;
     document.getElementById('insertarLineaBtn').onclick = insertarLineaDecorativa;
     document.getElementById('eliminarLineaBtn').onclick = eliminarLineaCercana;
+    document.getElementById('insertarIconoBtn').onclick = insertarIcono;
+    document.getElementById('eliminarIconoBtn').onclick = eliminarIconoCercano;
     document.getElementById('combinarSeleccionBtn').onclick = combinarCeldasSeleccionadas;
     document.getElementById('eliminarCeldaBtn').onclick = eliminarCelda;
     document.getElementById('eliminarFilaBtn').onclick = eliminarFila;

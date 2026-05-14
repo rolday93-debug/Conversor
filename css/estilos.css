@@ -706,3 +706,15 @@ button {
     transform: scale(1.02);
     transition: all 0.2s;
 }
+
+.icono-insertado {
+    display: inline-block;
+    vertical-align: middle;
+    max-width: 32px;
+    max-height: 32px;
+}
+
+.icono-insertado {
+    display: inline-block !important;
+    vertical-align: middle;
+}
