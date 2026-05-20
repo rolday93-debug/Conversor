@@ -34,6 +34,8 @@
                 <button id="convertirBtn" class="btn-primary">
                     <span class="btn-icon">⚡</span> Convertir a HTML
                 </button>
+                <button id="editarHtmlBtn" class="btn-editar-html" style="margin-top: 1rem;">📝 Editar HTML</button>
+                <input type="file" id="inputHtml" accept=".html" style="display: none;">
             </div>
         </div>
 
@@ -78,6 +80,8 @@
             <button type="button" class="tool-btn" data-cmd="italic"><i>I</i></button>
             <button type="button" class="tool-btn" data-cmd="underline"><u>U</u></button>
             <button type="button" class="tool-btn" data-cmd="strikeThrough"><s>S</s></button>
+            <button type="button" class="tool-btn" data-cmd="superscript" title="Superíndice">X²</button>
+            <button type="button" class="tool-btn" data-cmd="subscript" title="Subíndice">X₂</button>
         </div>
         <div class="toolbar-divider"></div>
         <div class="toolbar-group">
@@ -92,6 +96,8 @@
             <span class="toolbar-label">Listas</span>
             <button type="button" class="tool-btn" data-cmd="insertUnorderedList">•</button>
             <button type="button" class="tool-btn" data-cmd="insertOrderedList">1.</button>
+            <button type="button" id="listaLetrasBtn" class="tool-btn" title="Lista con letras (a, b, c)">a.</button>
+            <button type="button" id="listaRomanosBtn" class="tool-btn" title="Lista con números romanos (I, II, III)">I.</button>
             <button type="button" class="tool-btn" data-cmd="outdent">←</button>
             <button type="button" class="tool-btn" data-cmd="indent">→</button>
         </div>
@@ -122,8 +128,10 @@
             <button type="button" id="insertarTablaBtn" class="tool-btn accent">📊 Tabla</button>
             <button type="button" id="insertarEnlaceBtn" class="tool-btn">🔗 Enlace</button>
             <button type="button" id="anadirLogoBtn" class="tool-btn">🏷️ Logo</button>
+        <div class="toolbar-divider"></div>    
             <button type="button" id="insertarLineaBtn" class="tool-btn" title="Insertar línea decorativa">📏 Línea</button>
             <button type="button" id="eliminarLineaBtn" class="tool-btn danger" title="Eliminar línea cercana">❌ Eliminar línea</button>
+        <div class="toolbar-divider"></div>
             <button type="button" id="insertarIconoBtn" class="tool-btn accent" title="Insertar icono">🏷️ Icono</button>
             <button type="button" id="eliminarIconoBtn" class="tool-btn danger" title="Eliminar icono cercano">❌ Eliminar icono</button>
         </div>
@@ -147,6 +155,7 @@
     <!-- Pestaña: Referencias -->
     <div class="tab-content-toolbar" id="tab-referencias">
         <div class="toolbar-group">
+            <button type="button" id="deshacerSangriaBtn" class="tool-btn" title="Deshacer última sangría">↩️ Deshacer sangría</button>
             <button type="button" id="sangriaFrancesaBtn" class="tool-btn">📑 Sangría francesa</button>
             <button type="button" id="sangriaNormalBtn" class="tool-btn">📝 Sangría normal</button>
             <button type="button" id="numerarReferenciasBtn" class="tool-btn">🔢 Numerar</button>

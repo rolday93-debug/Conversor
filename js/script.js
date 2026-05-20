@@ -9,6 +9,9 @@ let observerTablas = null;
 let observerImagenes = null;
 let imagenSeleccionada = null;
 let savedSelection = null;
+let ultimoBloqueSangria = null;
+let htmlAntesSangria = null;
+let ultimoBloqueSangriaTexto = null;
 
 // ============================================================
 // UTILIDADES DE SELECCIÓN
@@ -170,6 +173,60 @@ function agruparSeccionesContinuas(htmlFragment) {
     return tempDiv.innerHTML;
 }
 
+// ============================================================
+// LISTAS CON LETRAS Y ROMANOS
+// ============================================================
+function aplicarListaLetras() {
+    const contenido = obtenerContenidoEditable();
+    if (!contenido || contenido.contentEditable !== 'true') {
+        Swal.fire({ icon: 'warning', title: 'Modo edición requerido', text: 'Activa el modo edición primero', confirmButtonColor: '#f59e0b' });
+        return;
+    }
+    contenido.focus();
+    
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    
+    // Verificar si ya estamos dentro de una lista ordenada (ol)
+    let node = selection.getRangeAt(0).commonAncestorContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    let lista = node.closest('ol, ul');
+    
+    if (lista && lista.tagName === 'OL') {
+        // Si ya es una lista ordenada, solo cambiar el estilo
+        lista.style.listStyleType = 'lower-alpha';
+    } else {
+        // Si no, crear una nueva lista ordenada con el estilo de letras
+        document.execCommand('insertOrderedList', false, null);
+        // Buscar la lista recién creada y aplicar estilo
+        lista = contenido.querySelector('ol:last-of-type');
+        if (lista) lista.style.listStyleType = 'lower-alpha';
+    }
+}
+
+function aplicarListaRomanos() {
+    const contenido = obtenerContenidoEditable();
+    if (!contenido || contenido.contentEditable !== 'true') {
+        Swal.fire({ icon: 'warning', title: 'Modo edición requerido', text: 'Activa el modo edición primero', confirmButtonColor: '#f59e0b' });
+        return;
+    }
+    contenido.focus();
+    
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    
+    let node = selection.getRangeAt(0).commonAncestorContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    let lista = node.closest('ol, ul');
+    
+    if (lista && lista.tagName === 'OL') {
+        lista.style.listStyleType = 'upper-roman';
+    } else {
+        document.execCommand('insertOrderedList', false, null);
+        lista = contenido.querySelector('ol:last-of-type');
+        if (lista) lista.style.listStyleType = 'upper-roman';
+    }
+}
 // ============================================================
 // ASIGNAR CLASE .resumen-contenido A LOS PÁRRAFOS DEL RESUMEN
 // ============================================================
@@ -459,7 +516,7 @@ function actualizarBotonesActivos() {
     try {
         document.querySelectorAll('.tool-btn[data-cmd]').forEach(btn => {
             const cmd = btn.getAttribute('data-cmd');
-            if (['bold', 'italic', 'underline', 'strikeThrough'].includes(cmd)) {
+            if (['bold', 'italic', 'underline', 'strikeThrough', 'superscript', 'subscript'].includes(cmd)) {
                 btn.classList.toggle('active', document.queryCommandState(cmd));
             }
         });
@@ -580,14 +637,131 @@ function aplicarComando(cmd, valor = null) {
         let align = cmd.replace('justify', '').toLowerCase();
         if (align === 'full') align = 'justify';
         aplicarAlineacionTexto(align);
+    } else if (cmd === 'superscript') {
+        document.execCommand('superscript', false, null);
+    } else if (cmd === 'subscript') {
+        document.execCommand('subscript', false, null);
     } else if (cmd === 'undo') {
         document.execCommand('undo');
     } else if (cmd === 'redo') {
         document.execCommand('redo');
+    } else if (cmd === 'outdent' || cmd === 'indent') {
+    console.log('Ejecutando sangría:', cmd);
+    const bloque = obtenerBloqueActual();
+    if (bloque && contenido.contains(bloque)) {
+        ultimoBloqueSangria = bloque;
+        // Guardamos el HTML y también una copia del texto (para buscar después)
+        htmlAntesSangria = bloque.outerHTML;
+        ultimoBloqueSangriaTexto = bloque.textContent.trim();
+        console.log('✅ Guardado. Texto:', ultimoBloqueSangriaTexto.substring(0, 80));
     } else {
-        document.execCommand(cmd, false, valor);
+        console.warn('No se encontró bloque');
+        ultimoBloqueSangria = null;
+        htmlAntesSangria = null;
+        ultimoBloqueSangriaTexto = null;
+    }
+    document.execCommand(cmd, false, valor);
+        
+        // CORRECCIÓN: Actualizar la referencia al bloque después del execCommand
+        // porque el navegador puede haber envuelto el bloque en <blockquote> u otro elemento
+        setTimeout(() => {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                let node = selection.getRangeAt(0).startContainer;
+                if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+                // Buscar el bloque actualizado después del cambio
+                const nuevoBloque = node.closest('p, div, h1, h2, h3, h4, h5, h6, li, td, th, section, article, blockquote');
+                if (nuevoBloque) {
+                    // Si el bloque cambió (por ejemplo, ahora está dentro de un blockquote),
+                    // actualizamos la referencia para apuntar al bloque real que contiene el contenido
+                    ultimoBloqueSangria = nuevoBloque;
+                    // Guardamos el nuevo estado también para poder deshacerlo
+                    htmlAntesSangria = nuevoBloque.outerHTML;
+                    console.log('✅ Referencia actualizada después de sangría:', nuevoBloque.tagName);
+                }
+            }
+        }, 0);
     }
     setTimeout(() => { actualizarSelectores(); actualizarBotonesActivos(); }, 10);
+}
+
+function obtenerBloqueActual() {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return null;
+    let node = selection.getRangeAt(0).startContainer;
+    // Si es un nodo de texto, subimos al elemento padre
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    // Buscamos cualquier elemento que pueda contener texto (p, div, h1-h6, etc.)
+    // Si no se encuentra, devolvemos el elemento actual (que podría ser un span)
+    let bloque = node.closest('p, div, h1, h2, h3, h4, h5, h6, li, td, th, section, article');
+    return bloque || node;
+}
+
+function deshacerSangria() {
+    console.log('Intentando deshacer sangría. Texto guardado:', ultimoBloqueSangriaTexto);
+    
+    // Si no hay texto guardado, no se puede deshacer
+    if (!ultimoBloqueSangriaTexto) {
+        Swal.fire({ icon: 'info', title: 'Sin sangría previa', text: 'Aplica una sangría a un párrafo primero.', confirmButtonColor: '#3b82f6' });
+        return;
+    }
+    
+    const contenido = obtenerContenidoEditable();
+    if (!contenido) return;
+    
+    let bloqueEncontrado = null;
+    
+    // 1. Buscar por referencia original (si sigue existiendo)
+    if (ultimoBloqueSangria && document.body.contains(ultimoBloqueSangria) && contenido.contains(ultimoBloqueSangria)) {
+        bloqueEncontrado = ultimoBloqueSangria;
+        console.log('✅ Bloque encontrado por referencia original');
+    }
+    
+    // 2. Si no, buscar por el texto completo (contenido exacto)
+    if (!bloqueEncontrado) {
+        const todosLosBloques = contenido.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li, td, th, blockquote');
+        for (let bloque of todosLosBloques) {
+            if (bloque.textContent.trim() === ultimoBloqueSangriaTexto) {
+                bloqueEncontrado = bloque;
+                console.log('✅ Bloque encontrado por texto exacto');
+                break;
+            }
+        }
+    }
+    
+    // 3. Si aún no, buscar por texto parcial (inicio)
+    if (!bloqueEncontrado) {
+        const todosLosBloques = contenido.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li, td, th, blockquote');
+        for (let bloque of todosLosBloques) {
+            if (bloque.textContent.trim().startsWith(ultimoBloqueSangriaTexto.substring(0, 50))) {
+                bloqueEncontrado = bloque;
+                console.log('✅ Bloque encontrado por texto parcial');
+                break;
+            }
+        }
+    }
+    
+    if (bloqueEncontrado && htmlAntesSangria) {
+        try {
+            // Reemplazar el bloque actual por el HTML guardado
+            bloqueEncontrado.outerHTML = htmlAntesSangria;
+            Swal.fire({ icon: 'success', title: 'Sangría deshecha', timer: 1500, showConfirmButton: false });
+            // Limpiar las variables para evitar reaplicar la misma deshacer
+            ultimoBloqueSangria = null;
+            htmlAntesSangria = null;
+            ultimoBloqueSangriaTexto = null;
+        } catch (e) {
+            console.error('Error al restaurar HTML:', e);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo deshacer la sangría.', confirmButtonColor: '#ef4444' });
+        }
+    } else {
+        console.warn('No se encontró el bloque original');
+        Swal.fire({ icon: 'info', title: 'No se encontró el bloque', text: 'No se pudo localizar el bloque original para deshacer la sangría.', confirmButtonColor: '#3b82f6' });
+        // Limpiar variables para evitar intentos repetidos
+        ultimoBloqueSangria = null;
+        htmlAntesSangria = null;
+        ultimoBloqueSangriaTexto = null;
+    }
 }
 
 function aplicarAlineacionImagen(cmd) {
@@ -1054,7 +1228,56 @@ function aplicarControlesLogo() {
         if (opacidad) logo.style.opacity = opacidad;
     }
 }
+// ============================================================
+// MANEJAR PEGADO DE IMÁGENES DESDE PORTAPAPELES (CORRIGE REPETICIÓN)
+// ============================================================
+function manejarPegado(e) {
+    // Solo actuar si estamos en modo edición y el contenido es editable
+    const contenido = obtenerContenidoEditable();
+    if (!contenido || contenido.contentEditable !== 'true') return;
 
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    let imagenEncontrada = false;
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf('image') !== -1) {
+            // Hay una imagen en el portapapeles
+            const blob = item.getAsFile();
+            if (blob) {
+                e.preventDefault(); // Evitar el pegado por defecto del navegador
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const base64 = ev.target.result;
+                    contenido.focus();
+                    // Insertar imagen con estilos para que sea inline-block y redimensionable
+                    const imgHtml = `<img src="${base64}" class="nueva-imagen" style="max-width:100%; display:block; margin:1rem auto; border-radius:8px;" alt="Imagen pegada">`;
+                    document.execCommand('insertHTML', false, imgHtml);
+                    const nuevaImg = contenido.querySelector('img:last-of-type');
+                    if (nuevaImg) {
+                        addDragHandlers(nuevaImg);
+                        nuevaImg.addEventListener('click', (e) => {
+                            if (modoEdicion) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                seleccionarImagen(nuevaImg);
+                            }
+                        });
+                    }
+                };
+                reader.readAsDataURL(blob);
+                imagenEncontrada = true;
+                break;
+            }
+        }
+    }
+
+    // Si no se encontró imagen, dejamos que el navegador pegue texto normalmente (no hacemos nada)
+    if (!imagenEncontrada) {
+        // No prevenimos el evento, se pegará texto normal
+        return;
+    }
+}
 // ============================================================
 // OCULTAR ÁREA DE CARGA
 // ============================================================
@@ -1093,6 +1316,8 @@ function habilitarEdicion() {
     document.getElementById('insertarImagenBtn').onclick = insertarImagenManual;
     document.getElementById('insertarTablaBtn').onclick = insertarTabla;
     document.getElementById('insertarEnlaceBtn').onclick = insertarEnlace;
+    document.getElementById('listaLetrasBtn').onclick = aplicarListaLetras;
+    document.getElementById('listaRomanosBtn').onclick = aplicarListaRomanos;
     document.getElementById('anadirLogoBtn').onclick = anadirLogo;
     document.getElementById('aplicarLogoBtn').onclick = aplicarControlesLogo;
     document.getElementById('insertarLineaBtn').onclick = insertarLineaDecorativa;
@@ -1113,6 +1338,7 @@ function habilitarEdicion() {
     document.getElementById('sangriaNormalBtn').onclick = aplicarSangriaNormal;
     document.getElementById('numerarReferenciasBtn').onclick = numerarReferencias;
     document.getElementById('estiloAPABtn').onclick = aplicarEstiloAPA;
+    document.getElementById('deshacerSangriaBtn').onclick = deshacerSangria;
     
     habilitarSeleccionCeldas();
     habilitarDragAndDrop();
@@ -1123,6 +1349,7 @@ function habilitarEdicion() {
     });
     observerTablas.observe(contenido, { childList: true, subtree: true });
     contenido.addEventListener('keydown', manejarAtajosTeclado);
+    contenido.addEventListener('paste', manejarPegado);
     contenido.querySelectorAll('img').forEach(img => { img.addEventListener('click', (e) => { if (modoEdicion) { e.preventDefault(); e.stopPropagation(); seleccionarImagen(img); } }); });
     actualizarSelectores();
 }
@@ -1255,6 +1482,7 @@ function guardarEdicion() {
     if (observerTablas) observerTablas.disconnect();
     observerTablas = null;
     contenido.removeEventListener('keydown', manejarAtajosTeclado);
+    contenido.removeEventListener('paste', manejarPegado);
     Swal.fire({ icon: 'success', title: 'Cambios guardados', text: 'El documento se ha actualizado.', confirmButtonColor: '#059669', timer: 2000, showConfirmButton: false });
 }
 
@@ -1459,10 +1687,122 @@ function eliminarLineaCercana() {
     elementoAEliminar.remove();
     Swal.fire({ icon: 'success', title: 'Línea eliminada', timer: 1200, showConfirmButton: false });
 }
+
+// ============================================================
+// CARGAR HTML EXPORTADO DIRECTAMENTE A EDICIÓN
+// ============================================================
+function cargarHtmlDesdeArchivo() {
+    const input = document.getElementById('inputHtml');
+    if (input) input.click();
+}
+
+function procesarArchivoHtml(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!file.name.endsWith('.html')) {
+        Swal.fire({ icon: 'error', title: 'Formato incorrecto', text: 'Selecciona un archivo .html', confirmButtonColor: '#ef4444' });
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const contenidoHtmlCompleto = e.target.result;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(contenidoHtmlCompleto, 'text/html');
+        
+        // Extraer el contenido principal (puede estar dentro de .documento-contenido o .contenido-convertido)
+        let contenidoExtraido = null;
+        const documentoContenido = doc.querySelector('.documento-contenido');
+        if (documentoContenido) {
+            contenidoExtraido = documentoContenido.innerHTML;
+        } else {
+            const contenidoConvertido = doc.querySelector('.contenido-convertido');
+            if (contenidoConvertido) {
+                contenidoExtraido = contenidoConvertido.innerHTML;
+            } else {
+                // Fallback: todo el body
+                contenidoExtraido = doc.body.innerHTML;
+            }
+        }
+        
+        if (!contenidoExtraido) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo extraer el contenido del HTML.', confirmButtonColor: '#ef4444' });
+            return;
+        }
+        
+        // Mostrar en la vista previa
+        const vistaDiv = document.getElementById('vistaPrevia');
+        if (vistaDiv) {
+            vistaDiv.innerHTML = `<div class="contenido-convertido">${contenidoExtraido}</div>`;
+            htmlActual = contenidoExtraido;
+            
+            // Ocultar área de carga y mostrar el editor
+            ocultarAreaCarga(true);
+            document.getElementById('resultado').style.display = 'block';
+            
+            // Activar modo edición automáticamente
+            habilitarEdicion();
+        }
+        // Limpiar input para permitir cargar el mismo archivo otra vez
+        event.target.value = '';
+    };
+    reader.onerror = function() {
+        Swal.fire({ icon: 'error', title: 'Error de lectura', text: 'No se pudo leer el archivo.', confirmButtonColor: '#ef4444' });
+    };
+    reader.readAsText(file);
+}
+
+function configurarDescarga() {
+    const descargarBtn = document.getElementById('descargarBtn');
+    if (!descargarBtn) return;
+    
+    descargarBtn.onclick = async () => {
+        // Si estamos en modo edición, preguntar si guardar cambios
+        if (modoEdicion) {
+            const result = await Swal.fire({
+                title: '¿Guardar cambios?',
+                text: 'Estás en modo edición. ¿Guardar antes de descargar?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#059669',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, guardar',
+                cancelButtonText: 'No, descargar sin guardar'
+            });
+            if (result.isConfirmed) guardarEdicion();
+        }
+        
+        // Obtener el contenido final (el que se está viendo en el editor)
+        const finalHtml = obtenerContenidoEditable()?.innerHTML || htmlActual;
+        let nombreArchivoSalida = document.getElementById('nombreArchivo').value.trim();
+        if (nombreArchivoSalida === '') {
+            // Si no hay nombre, usar "documento_editado"
+            nombreArchivoSalida = 'documento_editado';
+        }
+        
+        const blob = new Blob([generarDocumentoCompleto(finalHtml, nombreArchivoSalida)], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = nombreArchivoSalida + '.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Descarga completada',
+            text: `Archivo guardado como ${nombreArchivoSalida}.html`,
+            confirmButtonColor: '#059669',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    };
+}
 // ============================================================
 // EVENTO PRINCIPAL
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
+    // Configurar el botón de descarga de forma global (funciona siempre)
+    configurarDescarga();
+
     const convertirBtn = document.getElementById('convertirBtn');
     const fileInput = document.getElementById('inputWord');
     const resultadoDiv = document.getElementById('resultado');
@@ -1482,14 +1822,30 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Asignar evento al botón "Editar HTML"
+    const editarHtmlBtn = document.getElementById('editarHtmlBtn');
+    const inputHtml = document.getElementById('inputHtml');
+    if (editarHtmlBtn && inputHtml) {
+        editarHtmlBtn.addEventListener('click', cargarHtmlDesdeArchivo);
+        inputHtml.addEventListener('change', procesarArchivoHtml);
+    }
+
     document.getElementById('editarBtn').addEventListener('click', habilitarEdicion);
     document.getElementById('guardarEdicionBtn').addEventListener('click', guardarEdicion);
+
     convertirBtn.addEventListener('click', function() {
-        if (!fileInput.files.length) { Swal.fire({ icon: 'warning', title: 'Sin archivo', text: 'Selecciona un archivo .docx', confirmButtonColor: '#f59e0b' }); return; }
+        if (!fileInput.files.length) {
+            Swal.fire({ icon: 'warning', title: 'Sin archivo', text: 'Selecciona un archivo .docx', confirmButtonColor: '#f59e0b' });
+            return;
+        }
         const archivo = fileInput.files[0];
-        if (!/\.docx$/i.test(archivo.name)) { Swal.fire({ icon: 'error', title: 'Formato incorrecto', text: 'El archivo debe ser .docx', confirmButtonColor: '#ef4444' }); return; }
+        if (!/\.docx$/i.test(archivo.name)) {
+            Swal.fire({ icon: 'error', title: 'Formato incorrecto', text: 'El archivo debe ser .docx', confirmButtonColor: '#ef4444' });
+            return;
+        }
         const nombreInput = document.getElementById('nombreArchivo');
         if (nombreInput) nombreInput.value = archivo.name.replace(/\.docx$/i, '');
+
         convertirBtn.disabled = true;
         convertirBtn.innerHTML = '<span class="btn-icon">⏳</span> Convirtiendo...';
         const reader = new FileReader();
@@ -1504,31 +1860,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 vistaDiv.innerHTML = `<div class="contenido-convertido">${htmlMejorado}</div>`;
                 resultadoDiv.style.display = 'block';
                 resultadoDiv.scrollIntoView({ behavior: 'smooth' });
-                document.getElementById('descargarBtn').onclick = async () => {
-                    if (modoEdicion) {
-                        const result = await Swal.fire({ title: '¿Guardar cambios?', text: 'Estás en modo edición. ¿Guardar antes de descargar?', icon: 'question', showCancelButton: true, confirmButtonColor: '#059669', cancelButtonColor: '#6c757d', confirmButtonText: 'Sí, guardar', cancelButtonText: 'No, descargar sin guardar' });
-                        if (result.isConfirmed) guardarEdicion();
-                    }
-                    const finalHtml = obtenerContenidoEditable()?.innerHTML || htmlActual;
-                    let nombreArchivoSalida = document.getElementById('nombreArchivo').value.trim();
-                    if (nombreArchivoSalida === '') nombreArchivoSalida = archivo.name.replace(/\.docx$/i, '');
-                    const blob = new Blob([generarDocumentoCompleto(finalHtml, nombreArchivoSalida)], { type: 'text/html;charset=utf-8' });
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = nombreArchivoSalida + '.html';
-                    a.click();
-                    URL.revokeObjectURL(a.href);
-                    Swal.fire({ icon: 'success', title: 'Descarga completada', text: `Archivo guardado como ${nombreArchivoSalida}.html`, confirmButtonColor: '#059669', timer: 2000, showConfirmButton: false });
-                };
+
+                // Ya no redefinimos descargarBtn.onclick aquí, porque configurarDescarga ya lo hizo globalmente
+
                 convertirBtn.disabled = false;
                 convertirBtn.innerHTML = '<span class="btn-icon">⚡</span> Convertir a HTML';
-            }).catch(err => { console.error(err); Swal.fire({ icon: 'error', title: 'Error en conversión', text: err.message, confirmButtonColor: '#ef4444' }); convertirBtn.disabled = false; convertirBtn.innerHTML = '<span class="btn-icon">⚡</span> Convertir a HTML'; });
+            }).catch(err => {
+                console.error(err);
+                Swal.fire({ icon: 'error', title: 'Error en conversión', text: err.message, confirmButtonColor: '#ef4444' });
+                convertirBtn.disabled = false;
+                convertirBtn.innerHTML = '<span class="btn-icon">⚡</span> Convertir a HTML';
+            });
         };
         reader.readAsArrayBuffer(archivo);
-        inicializarReglas();
     });
 });
-
 // ============================================================
 // RECUADRO CON SweetAlert2 (sin cambios)
 // ============================================================
