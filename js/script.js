@@ -293,7 +293,62 @@ function mejorarEstructuraHTML(htmlFragment) {
     htmlResultado = limpiarEstilosSecciones(htmlResultado);
     htmlResultado = agruparSeccionesContinuas(htmlResultado);
     htmlResultado = agruparResumen(htmlResultado);
+    htmlResultado = procesarSaltosPagina(htmlResultado);
+    // Envolver el contenido en páginas si no hay ninguna
+const tempDiv2 = document.createElement('div');
+tempDiv2.innerHTML = htmlResultado;
+if (!tempDiv2.querySelector('.pagina')) {
+    const contenido = tempDiv2.innerHTML;
+    tempDiv2.innerHTML = `<div class="pagina">${contenido}</div>`;
+}
+htmlResultado = tempDiv2.innerHTML;
+
     return htmlResultado;
+}
+
+function procesarSaltosPagina(htmlFragment) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlFragment;
+    
+    // Buscar todos los divs con page-break-before: always
+    const pageBreaks = tempDiv.querySelectorAll('div[style*="page-break-before: always"]');
+    pageBreaks.forEach(div => {
+        // Crear un elemento separador visual
+        const separator = document.createElement('div');
+        separator.className = 'salto-pagina-visual';
+        separator.innerHTML = `
+            <div class="salto-pagina-contenedor">
+                <hr class="linea-superior">
+                <span class="etiqueta-salto">📄 Salto de página</span>
+                <hr class="linea-inferior">
+            </div>
+        `;
+        // Reemplazar el div original por el separador
+        div.parentNode.replaceChild(separator, div);
+    });
+    
+    return tempDiv.innerHTML;
+}
+
+function estructurarContenido(htmlFragment) {
+    // Procesar saltos de página (convierte divs con page-break en separadores)
+    let html = procesarSaltosPagina(htmlFragment);
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // Si no hay ninguna página, envolver todo en una
+    if (!tempDiv.querySelector('.pagina')) {
+        const contenido = tempDiv.innerHTML;
+        tempDiv.innerHTML = `<div class="pagina">${contenido}</div>`;
+    }
+    
+    // Asegurar que las páginas tengan contenteditable="true" para edición
+    tempDiv.querySelectorAll('.pagina').forEach(pag => {
+        pag.setAttribute('contenteditable', 'true');
+    });
+    
+    return tempDiv.innerHTML;
 }
 
 function initDragAndDrop() {
@@ -357,44 +412,67 @@ function initDragAndDrop() {
 function generarDocumentoCompleto(contenidoMejorado, tituloPersonalizado) {
     const cssExportado = `        /* Reset y base */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #f5f5f5; margin: 20px; padding: 0; font-family: 'Crimson Text', Georgia, serif; line-height: 1.6; color: #1e293b; }
-        .documento-exportado { max-width: 1100px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+        body { 
+            background: #cbd5e1; 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Crimson Text', Georgia, serif; 
+            line-height: 1.6; 
+            color: #1e293b; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
         
-        /* Header tipo "filo elegante" */
-        .documento-header {
+        /* El header y footer ya no son independientes, sino parte de las páginas */
+        /* Los estilos se aplican a los elementos dentro de .pagina */
+        .pagina {
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin: 0.1rem auto;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 1000px;
+            box-sizing: border-box;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            position: relative;
+        }
+        .pagina:first-child {
+            margin-top: 0;
+        }
+        .pagina:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Estilo para el header dentro de la primera página */
+        .pagina:first-child .header-integrado {
             background: white;
             padding: 0.4rem 2rem;
             border-bottom: 2px solid;
             border-image: linear-gradient(90deg, #1e3a8a, #60a5fa, #1e3a8a) 1;
             border-image-slice: 1;
+            margin: -2rem -2rem 2rem -2rem; /* Ocupa todo el ancho del padding de la página */
+            border-radius: 8px 8px 0 0;
         }
-        .documento-titulo {
-            font-family: 'Georgia', 'Times New Roman', serif;
-            font-size: 1.3rem;
-            font-weight: 600;
-            letter-spacing: -0.3px;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            color: #0f172a;
-        }
-        .documento-contenido { padding: 2rem 2.5rem; }
-        .documento-footer { background: #f8fafc; padding: 1rem 2rem; text-align: center; font-size: 0.75rem; color: #64748b; border-top: 1px solid #e2e8f0; }
-        
-        /* Sin espacios extra entre párrafos – respeta la edición del usuario */
-        .documento-contenido p {
-            margin: 0;
-            text-align: justify;
+        .pagina:last-child .footer-integrado {
+            background: #f8fafc;
+            padding: 1rem 2rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+            margin: 2rem -2rem -2rem -2rem;
+            border-radius: 0 0 8px 8px;
         }
         
         /* Sangría para listas */
-        .documento-contenido ul,
-        .documento-contenido ol {
+        .pagina ul, .pagina ol {
             margin: 0.75em 0;
             padding-left: 2em;
         }
-        .documento-contenido li {
+        .pagina li {
             margin-bottom: 0.25em;
             line-height: 1.6;
         }
@@ -404,35 +482,63 @@ function generarDocumentoCompleto(contenidoMejorado, tituloPersonalizado) {
         .tabla-con-bordes th, .tabla-con-bordes td { border: 1px solid #e2e8f0; padding: 8px 12px; vertical-align: top; }
         .tabla-con-bordes th { background-color: #f8fafc; font-weight: 600; }
 
-/* Imágenes normales (convertidas desde Word o insertadas manualmente) */
-.documento-contenido img:not(.icono-insertado) {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    margin: 1rem auto;
-    display: block;
-}
-
-/* Iconos insertados (en línea) */
-.documento-contenido .icono-insertado {
-    display: inline-block;
-    vertical-align: middle;
-    max-width: 32px;
-    max-height: 32px;
-    width: auto;
-    height: auto;
-    margin: 0 2px;
-}        
+        /* Imágenes normales */
+        .pagina img:not(.icono-insertado) {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin: 1rem auto;
+            display: block;
+        }
+        
+        /* Iconos insertados (en línea) */
+        .pagina .icono-insertado {
+            display: inline-block;
+            vertical-align: middle;
+            max-width: 32px;
+            max-height: 32px;
+            width: auto;
+            height: auto;
+            margin: 0 2px;
+        }
+        
         /* Márgenes para secciones */
         .tipo-articulo { margin: 0.5em 0 0.5em 0; }
-        h1, .documento-titulo { margin: 1em 0 0.5em 0; }
+        .documento-titulo { font-family: 'Georgia', 'Times New Roman', serif; font-size: 1.3rem; font-weight: 600; letter-spacing: -0.3px; margin: 0; display: flex; align-items: center; gap: 0.6rem; color: #0f172a; }
         .autor, .grupo-autores { margin: 0.5em 0; }
         .afiliacion, .grupo-afiliaciones { margin: 0.5em 0; }
         .resumen-titulo { margin: 1em 0 0.5em 0; }
-        .seccion-titulo { margin: 1.5em 0 1em 0; }`;
+        .seccion-titulo { margin: 1.5em 0 1em 0; }
+        
+        /* Saltos de página para impresión */
+        @media print {
+            body { background: white; padding: 0; }
+            .pagina { box-shadow: none; margin: 0; page-break-after: always; }
+            .pagina:first-child .header-integrado { margin: 0; border-bottom: 1px solid #ccc; }
+            .pagina:last-child .footer-integrado { margin: 0; border-top: 1px solid #ccc; }
+        }`;
         
     const escapeHTML = (str) => str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]);
+    
+    // Insertar header en la primera página y footer en la última
+    let htmlConPaginas = contenidoMejorado;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlConPaginas;
+    const primerasPaginas = tempDiv.querySelectorAll('.pagina');
+    if (primerasPaginas.length > 0) {
+        // Insertar header al inicio de la primera página
+        const primeraPagina = primerasPaginas[0];
+        const headerHtml = `<div class="header-integrado"><h1 class="documento-titulo">📄 ${escapeHTML(tituloPersonalizado)}</h1></div>`;
+        primeraPagina.insertAdjacentHTML('afterbegin', headerHtml);
+        
+        // Insertar footer al final de la última página
+        const ultimaPagina = primerasPaginas[primerasPaginas.length - 1];
+        const footerHtml = `<div class="footer-integrado"><p>Documento generado con Conversor Word a HTML</p></div>`;
+        ultimaPagina.insertAdjacentHTML('beforeend', footerHtml);
+    }
+    htmlConPaginas = tempDiv.innerHTML;
+    
     return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -444,20 +550,11 @@ ${cssExportado}
     </style>
 </head>
 <body>
-    <div class="documento-exportado">
-        <header class="documento-header">
-            <h1 class="documento-titulo">📄 ${escapeHTML(tituloPersonalizado)}</h1>
-        </header>
-        <main class="documento-contenido">
-            ${contenidoMejorado}
-        </main>
-        <footer class="documento-footer">
-            <p>Documento generado con Conversor Word a HTML</p>
-        </footer>
-    </div>
+    ${htmlConPaginas}
 </body>
 </html>`;
 }
+
 // ============================================================
 // EDITOR - FUNCIONES DE FORMATO (CON APLICACIÓN POR BLOQUES)
 // ============================================================
@@ -484,20 +581,32 @@ function actualizarSelectores() {
     }
     const computedStyle = window.getComputedStyle(fontElement);
     const fontFamily = computedStyle.fontFamily;
-    const fontSizePx = computedStyle.fontSize; // ej: "16px"
+    const fontSizePx = computedStyle.fontSize;
     const fuenteSelect = document.getElementById('fuenteSelect');
     if (fuenteSelect) {
-        const fuentes = Array.from(fuenteSelect.options).map(o => o.value.toLowerCase());
-        const currentFont = fontFamily.replace(/["']/g, '').toLowerCase();
-        let matchIndex = -1;
-        fuentes.forEach((f, idx) => { if (currentFont.includes(f) || f.includes(currentFont.split(',')[0]?.trim())) matchIndex = idx; });
-        if (matchIndex >= 0) fuenteSelect.selectedIndex = matchIndex;
+        let currentFont = '';
+        let targetElement = fontElement;
+        while (targetElement && targetElement !== obtenerContenidoEditable()) {
+            const style = window.getComputedStyle(targetElement);
+            if (style.fontFamily && style.fontFamily !== 'inherit') {
+                currentFont = style.fontFamily.replace(/["']/g, '').toLowerCase();
+                break;
+            }
+            targetElement = targetElement.parentElement;
+        }
+        if (currentFont) {
+            const fuentes = Array.from(fuenteSelect.options).map(o => o.value.toLowerCase());
+            let matchIndex = -1;
+            fuentes.forEach((f, idx) => {
+                if (currentFont.includes(f) || f.includes(currentFont.split(',')[0])) matchIndex = idx;
+            });
+            if (matchIndex >= 0) fuenteSelect.selectedIndex = matchIndex;
+        }
     }
-    // Mostrar el tamaño actual en el select (si existe una opción cercana) o mostrar el valor en un tooltip
     const tamanoSelect = document.getElementById('tamanoSelect');
     if (tamanoSelect && fontSizePx) {
         const px = parseInt(fontSizePx);
-        let bestMatch = '3'; // default 16px
+        let bestMatch = '3';
         let minDiff = 100;
         for (let i = 1; i <= 7; i++) {
             let val = parseInt(SIZE_MAP[i.toString()]);
@@ -510,6 +619,29 @@ function actualizarSelectores() {
         tamanoSelect.value = bestMatch;
     }
     actualizarBotonesActivos();
+}
+
+function estructurarContenido(htmlFragment) {
+    // Primero, procesar saltos de página (convierte divs con page-break en separadores)
+    let html = procesarSaltosPagina(htmlFragment);
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // Si no hay ninguna página, envolver todo en una
+    if (!tempDiv.querySelector('.pagina')) {
+        const contenido = tempDiv.innerHTML;
+        tempDiv.innerHTML = `<div class="pagina">${contenido}</div>`;
+    }
+    
+    // Asegurar que las páginas tengan contenteditable="true" si es necesario (para edición)
+    tempDiv.querySelectorAll('.pagina').forEach(pag => {
+        if (!pag.hasAttribute('contenteditable')) {
+            pag.setAttribute('contenteditable', 'true');
+        }
+    });
+    
+    return tempDiv.innerHTML;
 }
 
 function actualizarBotonesActivos() {
@@ -558,15 +690,56 @@ function obtenerBloquesSeleccionados() {
 }
 
 // Aplicar tamaño de fuente a todos los bloques seleccionados
-function aplicarTamañoABloques(sizePx) {
-    const bloques = obtenerBloquesSeleccionados();
-    if (bloques.size > 0) {
-        bloques.forEach(bloque => {
-            bloque.style.fontSize = sizePx;
-        });
+function aplicarTamañoAFuente(sizePx) {
+    // Restaurar la selección guardada si existe
+    if (savedSelection) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedSelection);
+    }
+    
+    const selection = window.getSelection();
+    if (!selection.rangeCount) {
+        Swal.fire({ icon: 'info', title: 'Sin selección', text: 'Selecciona un texto para cambiar el tamaño.', confirmButtonColor: '#3b82f6' });
+        return;
+    }
+    
+    const range = selection.getRangeAt(0);
+    
+    if (range.collapsed) {
+        // No hay texto seleccionado: insertar un span vacío con el tamaño y dejar el cursor dentro
+        const span = document.createElement('span');
+        span.style.fontSize = sizePx;
+        span.innerHTML = '\u200B'; // carácter invisible
+        range.insertNode(span);
+        const newRange = document.createRange();
+        newRange.setStartAfter(span);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
     } else {
-        // fallback: aplicar a la selección directa
-        document.execCommand('fontSize', false, '3'); // no es fiable, pero mejor que nada
+        // Hay texto seleccionado: envolverlo en un span con el tamaño
+        try {
+            const span = document.createElement('span');
+            span.style.fontSize = sizePx;
+            range.surroundContents(span);
+            // Restaurar la selección dentro del span
+            const newRange = document.createRange();
+            newRange.selectNodeContents(span);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+        } catch (e) {
+            // Si falla (selección no contigua), usar el método extractContents
+            const span = document.createElement('span');
+            span.style.fontSize = sizePx;
+            const contenido = range.extractContents();
+            span.appendChild(contenido);
+            range.insertNode(span);
+            const newRange = document.createRange();
+            newRange.selectNodeContents(span);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+        }
     }
 }
 
@@ -625,64 +798,40 @@ function aplicarAlineacionTexto(align) {
 }
 
 function aplicarComando(cmd, valor = null) {
+    if (savedSelection) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedSelection);
+    }
     const contenido = obtenerContenidoEditable();
     if (!contenido || contenido.contentEditable !== 'true') return;
     contenido.focus();
-    if (cmd === 'fontName') {
-        document.execCommand('fontName', false, valor);
-    } else if (cmd === 'fontSize') {
-        const sizePx = SIZE_MAP[valor] || '16px';
-        aplicarTamañoABloques(sizePx);
-    } else if (cmd === 'justifyLeft' || cmd === 'justifyCenter' || cmd === 'justifyRight' || cmd === 'justifyFull') {
-        let align = cmd.replace('justify', '').toLowerCase();
-        if (align === 'full') align = 'justify';
-        aplicarAlineacionTexto(align);
-    } else if (cmd === 'superscript') {
-        document.execCommand('superscript', false, null);
-    } else if (cmd === 'subscript') {
-        document.execCommand('subscript', false, null);
-    } else if (cmd === 'undo') {
-        document.execCommand('undo');
-    } else if (cmd === 'redo') {
-        document.execCommand('redo');
-    } else if (cmd === 'outdent' || cmd === 'indent') {
-    console.log('Ejecutando sangría:', cmd);
-    const bloque = obtenerBloqueActual();
-    if (bloque && contenido.contains(bloque)) {
-        ultimoBloqueSangria = bloque;
-        // Guardamos el HTML y también una copia del texto (para buscar después)
-        htmlAntesSangria = bloque.outerHTML;
-        ultimoBloqueSangriaTexto = bloque.textContent.trim();
-        console.log('✅ Guardado. Texto:', ultimoBloqueSangriaTexto.substring(0, 80));
-    } else {
-        console.warn('No se encontró bloque');
-        ultimoBloqueSangria = null;
-        htmlAntesSangria = null;
-        ultimoBloqueSangriaTexto = null;
-    }
-    document.execCommand(cmd, false, valor);
-        
-        // CORRECCIÓN: Actualizar la referencia al bloque después del execCommand
-        // porque el navegador puede haber envuelto el bloque en <blockquote> u otro elemento
-        setTimeout(() => {
-            const selection = window.getSelection();
-            if (selection.rangeCount > 0) {
-                let node = selection.getRangeAt(0).startContainer;
-                if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-                // Buscar el bloque actualizado después del cambio
-                const nuevoBloque = node.closest('p, div, h1, h2, h3, h4, h5, h6, li, td, th, section, article, blockquote');
-                if (nuevoBloque) {
-                    // Si el bloque cambió (por ejemplo, ahora está dentro de un blockquote),
-                    // actualizamos la referencia para apuntar al bloque real que contiene el contenido
-                    ultimoBloqueSangria = nuevoBloque;
-                    // Guardamos el nuevo estado también para poder deshacerlo
-                    htmlAntesSangria = nuevoBloque.outerHTML;
-                    console.log('✅ Referencia actualizada después de sangría:', nuevoBloque.tagName);
-                }
-            }
-        }, 0);
-    }
-    setTimeout(() => { actualizarSelectores(); actualizarBotonesActivos(); }, 10);
+    setTimeout(() => {
+        if (cmd === 'fontName') {
+            aplicarFuenteConSpan(valor);
+        } else if (cmd === 'fontSize') {
+            const sizePx = SIZE_MAP[valor] || '16px';
+            aplicarTamañoAFuente(sizePx);
+        } else if (cmd === 'justifyLeft' || cmd === 'justifyCenter' || cmd === 'justifyRight' || cmd === 'justifyFull') {
+            let align = cmd.replace('justify', '').toLowerCase();
+            if (align === 'full') align = 'justify';
+            aplicarAlineacionTexto(align);
+        } else if (cmd === 'superscript') {
+            document.execCommand('superscript', false, null);
+        } else if (cmd === 'subscript') {
+            document.execCommand('subscript', false, null);
+        } else if (cmd === 'undo') {
+            document.execCommand('undo');
+        } else if (cmd === 'redo') {
+            document.execCommand('redo');
+        } else if (cmd === 'outdent' || cmd === 'indent') {
+            // tu lógica de sangría
+        } else {
+            document.execCommand(cmd, false, valor);
+        }
+        actualizarSelectores();
+        actualizarBotonesActivos();
+    }, 5);
 }
 
 function obtenerBloqueActual() {
@@ -764,6 +913,132 @@ function deshacerSangria() {
     }
 }
 
+function insertarNuevaPagina() {
+    const contenido = obtenerContenidoEditable();
+    if (!contenido || contenido.contentEditable !== 'true') {
+        Swal.fire({ icon: 'warning', title: 'Modo edición requerido', text: 'Activa el modo edición primero.', confirmButtonColor: '#f59e0b' });
+        return;
+    }
+    
+    const selection = window.getSelection();
+    if (!selection.rangeCount || selection.isCollapsed === false && selection.toString().length === 0) {
+        // Si no hay selección válida o está vacía, no hacer nada
+        Swal.fire({ icon: 'info', title: 'Posiciona el cursor', text: 'Coloca el cursor donde quieras dividir la página.', confirmButtonColor: '#3b82f6' });
+        return;
+    }
+    
+    const range = selection.getRangeAt(0);
+    const startContainer = range.startContainer;
+    const startOffset = range.startOffset;
+    
+    // Obtener la página actual que contiene el inicio de la selección
+    let paginaActual = startContainer.nodeType === Node.TEXT_NODE 
+        ? startContainer.parentElement.closest('.pagina')
+        : startContainer.closest('.pagina');
+    
+    if (!paginaActual) {
+        // Si no hay página, crear una con todo el contenido y salir
+        if (contenido.children.length === 0) return;
+        const nuevaPagina = document.createElement('div');
+        nuevaPagina.className = 'pagina';
+        nuevaPagina.contentEditable = 'true';
+        while (contenido.firstChild) nuevaPagina.appendChild(contenido.firstChild);
+        contenido.appendChild(nuevaPagina);
+        const nuevoRango = document.createRange();
+        nuevoRango.setStart(nuevaPagina, 0);
+        nuevoRango.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(nuevoRango);
+        Swal.fire({ icon: 'success', title: 'Página creada', timer: 1500, showConfirmButton: false });
+        return;
+    }
+    
+    // Crear un rango que abarque desde el inicio de la página hasta el cursor
+    const rangoAntes = document.createRange();
+    rangoAntes.setStart(paginaActual, 0);
+    rangoAntes.setEnd(startContainer, startOffset);
+    
+    // Crear un rango que abarque desde el cursor hasta el final de la página
+    const rangoDespues = document.createRange();
+    rangoDespues.setStart(startContainer, startOffset);
+    rangoDespues.setEnd(paginaActual, paginaActual.childNodes.length);
+    
+    // Extraer el contenido después del cursor
+    const fragmentoDespues = rangoDespues.extractContents();
+    
+    // Crear nueva página vacía
+    const nuevaPagina = document.createElement('div');
+    nuevaPagina.className = 'pagina';
+    nuevaPagina.contentEditable = 'true';
+    nuevaPagina.style.minHeight = '300px';
+    nuevaPagina.style.padding = '2rem';
+    nuevaPagina.style.backgroundColor = 'white';
+    nuevaPagina.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+    nuevaPagina.style.borderRadius = '8px';
+    
+    // Añadir el fragmento después a la nueva página
+    nuevaPagina.appendChild(fragmentoDespues);
+    
+    // Si la nueva página quedó vacía, insertar un párrafo
+    if (nuevaPagina.children.length === 0) {
+        const p = document.createElement('p');
+        p.innerHTML = '<br>';
+        nuevaPagina.appendChild(p);
+    }
+    
+    // Insertar la nueva página después de la actual
+    paginaActual.insertAdjacentElement('afterend', nuevaPagina);
+    
+    // Mover el cursor al inicio de la nueva página
+    const primerElemento = nuevaPagina.firstChild;
+    const nuevoRango = document.createRange();
+    if (primerElemento) {
+        nuevoRango.setStart(primerElemento, 0);
+        nuevoRango.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(nuevoRango);
+    }
+    
+    Swal.fire({ icon: 'success', title: 'Página dividida', timer: 1500, showConfirmButton: false });
+}
+
+function añadirPiePagina() {
+    const contenido = obtenerContenidoEditable();
+    if (!contenido || contenido.contentEditable !== 'true') {
+        Swal.fire({ icon: 'warning', title: 'Modo edición requerido', text: 'Activa el modo edición primero.', confirmButtonColor: '#f59e0b' });
+        return;
+    }
+    
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    let node = selection.getRangeAt(0).startContainer;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    let pagina = node.closest('.pagina');
+    if (!pagina) {
+        Swal.fire({ icon: 'info', title: 'No hay página', text: 'El cursor debe estar dentro de una página.', confirmButtonColor: '#3b82f6' });
+        return;
+    }
+    
+    // Verificar si ya tiene pie de página
+    if (pagina.querySelector('.pie-pagina')) {
+        Swal.fire({ icon: 'info', title: 'Ya existe pie', text: 'Esta página ya tiene un pie de página.', confirmButtonColor: '#3b82f6' });
+        return;
+    }
+    
+    const pie = document.createElement('div');
+    pie.className = 'pie-pagina';
+    pie.contentEditable = 'true';
+    pie.innerHTML = '<hr><p class="texto-pie">Pie de página. Haz clic para editar.</p>';
+    pie.style.marginTop = '2rem';
+    pie.style.fontSize = '0.8rem';
+    pie.style.color = '#64748b';
+    pie.style.borderTop = '1px solid #e2e8f0';
+    pie.style.paddingTop = '1rem';
+    pagina.appendChild(pie);
+    
+    Swal.fire({ icon: 'success', title: 'Pie añadido', timer: 1500, showConfirmButton: false });
+}
+
 function aplicarAlineacionImagen(cmd) {
     const selection = window.getSelection();
     if (!selection.rangeCount) return false;
@@ -784,7 +1059,14 @@ function aplicarAlineacionImagen(cmd) {
     return false;
 }
 
-function cambiarFuente() { const select = document.getElementById('fuenteSelect'); if (select) aplicarComando('fontName', select.value); }
+function cambiarFuente() {
+    const select = document.getElementById('fuenteSelect');
+    if (select) {
+        guardarSeleccion();
+        aplicarComando('fontName', select.value);
+    }
+}
+
 function cambiarTamaño() { const select = document.getElementById('tamanoSelect'); if (select) aplicarComando('fontSize', select.value); }
 
 // ============================================================
@@ -1180,6 +1462,12 @@ function eliminarIconoCercano() {
 // LOGOTIPO
 // ============================================================
 function anadirLogo() {
+    const contenido = obtenerContenidoEditable();
+    if (!contenido || contenido.contentEditable !== 'true') {
+        Swal.fire({ icon: 'warning', title: 'Modo edición requerido', text: 'Activa el modo edición antes de insertar el logo.', confirmButtonColor: '#f59e0b' });
+        return;
+    }
+    
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -1189,35 +1477,35 @@ function anadirLogo() {
         const reader = new FileReader();
         reader.onload = (ev) => {
             const base64 = ev.target.result;
-            const contenido = obtenerContenidoEditable();
-            if (contenido && contenido.contentEditable === 'true') {
-                let logoExistente = contenido.querySelector('.logo-revista');
-                if (logoExistente) logoExistente.src = base64;
-                else {
-                    const logoImg = document.createElement('img');
-                    logoImg.src = base64;
-                    logoImg.className = 'logo-revista';
-                    logoImg.style.display = 'block';
-                    logoImg.style.margin = '10px auto';
-                    logoImg.style.maxWidth = '80px';
-                    logoImg.style.opacity = '1';
-                    contenido.insertBefore(logoImg, contenido.firstChild);
-                }
-                const controlesLogo = document.getElementById('controlesLogo');
-                if (controlesLogo) controlesLogo.style.display = 'flex';
-                const logoActual = contenido.querySelector('.logo-revista');
-                if (logoActual) {
-                    const tamanoInput = document.getElementById('logoTamano');
-                    const opacidadInput = document.getElementById('logoOpacidad');
-                    if (tamanoInput) tamanoInput.value = parseInt(logoActual.style.maxWidth) || 80;
-                    if (opacidadInput) opacidadInput.value = logoActual.style.opacity || 1;
-                }
-            } else { Swal.fire({ icon: 'warning', title: 'Modo edición', text: 'Activa el modo edición antes de añadir el logo', confirmButtonColor: '#f59e0b' }); }
+            contenido.focus();
+            // Insertar logo con estilo (similar a imagen pero con clase específica)
+            const logoHtml = `<img src="${base64}" class="logo-revista" style="display: inline-block; max-width: 120px; margin: 0.5rem auto; vertical-align: middle;" alt="Logotipo">`;
+            document.execCommand('insertHTML', false, logoHtml);
+            // Aplicar manejadores de arrastre y selección al nuevo logo
+            const nuevoLogo = contenido.querySelector('.logo-revista:last-of-type');
+            if (nuevoLogo) {
+                addDragHandlers(nuevoLogo);
+                nuevoLogo.addEventListener('click', (e) => {
+                    if (modoEdicion) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        seleccionarImagen(nuevoLogo);
+                    }
+                });
+            }
+            // Mostrar controles de tamaño/opacidad (como antes)
+            document.getElementById('controlesLogo').style.display = 'flex';
+            const logoActual = contenido.querySelector('.logo-revista:last-of-type');
+            if (logoActual) {
+                document.getElementById('logoTamano').value = parseInt(logoActual.style.maxWidth) || 120;
+                document.getElementById('logoOpacidad').value = logoActual.style.opacity || 1;
+            }
         };
         reader.readAsDataURL(file);
     };
     input.click();
 }
+
 function aplicarControlesLogo() {
     const contenido = obtenerContenidoEditable();
     const logo = contenido?.querySelector('.logo-revista');
@@ -1286,6 +1574,59 @@ function ocultarAreaCarga(ocultar) {
     if (uploadArea) uploadArea.style.display = ocultar ? 'none' : 'block';
 }
 
+function cambiarTamaño() {
+    const select = document.getElementById('tamanoSelect');
+    if (select) {
+        guardarSeleccion(); // guardar antes de aplicar
+        aplicarComando('fontSize', select.value);
+    }
+}
+
+function aplicarFuenteConSpan(fontFamily) {
+    if (savedSelection) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(savedSelection);
+    }
+    const selection = window.getSelection();
+    if (!selection.rangeCount) {
+        Swal.fire({ icon: 'info', title: 'Sin selección', text: 'Selecciona un texto para cambiar la fuente.', confirmButtonColor: '#3b82f6' });
+        return;
+    }
+    const range = selection.getRangeAt(0);
+    if (range.collapsed) {
+        const span = document.createElement('span');
+        span.style.fontFamily = fontFamily;
+        span.innerHTML = '\u200B';
+        range.insertNode(span);
+        const newRange = document.createRange();
+        newRange.setStartAfter(span);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+    } else {
+        try {
+            const span = document.createElement('span');
+            span.style.fontFamily = fontFamily;
+            range.surroundContents(span);
+            const newRange = document.createRange();
+            newRange.selectNodeContents(span);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+        } catch (e) {
+            const span = document.createElement('span');
+            span.style.fontFamily = fontFamily;
+            const contenido = range.extractContents();
+            span.appendChild(contenido);
+            range.insertNode(span);
+            const newRange = document.createRange();
+            newRange.selectNodeContents(span);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+        }
+    }
+}
+
 // ============================================================
 // HABILITAR EDICIÓN (conecta todos los eventos)
 // ============================================================
@@ -1304,15 +1645,33 @@ function habilitarEdicion() {
     document.getElementById('barraHerramientas').style.display = 'flex';
     inicializarPestanasBarra();
     document.querySelectorAll('.tool-btn[data-cmd]').forEach(btn => {
-        btn.onclick = (e) => {
-            e.preventDefault();
-            const cmd = btn.getAttribute('data-cmd');
-            if (cmd && cmd.startsWith('justify')) { if (!aplicarAlineacionImagen(cmd)) aplicarComando(cmd); }
-            else if (cmd) aplicarComando(cmd);
-        };
-    });
+    btn.onclick = (e) => {
+        e.preventDefault();
+        guardarSeleccion();   // <-- Añadir esta línea
+        const cmd = btn.getAttribute('data-cmd');
+        if (cmd && cmd.startsWith('justify')) {
+            if (!aplicarAlineacionImagen(cmd)) aplicarComando(cmd);
+        } else if (cmd) {
+            aplicarComando(cmd);
+        }
+    };
+});
     document.getElementById('fuenteSelect').onchange = cambiarFuente;
+    const fuenteSelect = document.getElementById('fuenteSelect');
+if (fuenteSelect) {
+    fuenteSelect.addEventListener('mousedown', () => {
+        guardarSeleccion();
+    });
+    fuenteSelect.onchange = cambiarFuente;
+}
     document.getElementById('tamanoSelect').onchange = cambiarTamaño;
+    const tamanoSelect = document.getElementById('tamanoSelect');
+if (tamanoSelect) {
+    tamanoSelect.addEventListener('mousedown', () => {
+        guardarSeleccion();
+    });
+    tamanoSelect.onchange = cambiarTamaño; // ya lo tienes
+}
     document.getElementById('insertarImagenBtn').onclick = insertarImagenManual;
     document.getElementById('insertarTablaBtn').onclick = insertarTabla;
     document.getElementById('insertarEnlaceBtn').onclick = insertarEnlace;
@@ -1324,6 +1683,8 @@ function habilitarEdicion() {
     document.getElementById('eliminarLineaBtn').onclick = eliminarLineaCercana;
     document.getElementById('insertarIconoBtn').onclick = insertarIcono;
     document.getElementById('eliminarIconoBtn').onclick = eliminarIconoCercano;
+    document.getElementById('insertarSaltoPaginaBtn').onclick = insertarNuevaPagina;
+    document.getElementById('añadirPiePaginaBtn').onclick = añadirPiePagina;
     document.getElementById('combinarSeleccionBtn').onclick = combinarCeldasSeleccionadas;
     document.getElementById('eliminarCeldaBtn').onclick = eliminarCelda;
     document.getElementById('eliminarFilaBtn').onclick = eliminarFila;
@@ -1353,18 +1714,53 @@ function habilitarEdicion() {
     contenido.querySelectorAll('img').forEach(img => { img.addEventListener('click', (e) => { if (modoEdicion) { e.preventDefault(); e.stopPropagation(); seleccionarImagen(img); } }); });
     actualizarSelectores();
 }
+
 function manejarAtajosTeclado(e) {
     if (e.ctrlKey || e.metaKey) {
         switch(e.key.toLowerCase()) {
-            case 'b': e.preventDefault(); aplicarComando('bold'); break;
-            case 'i': e.preventDefault(); aplicarComando('italic'); break;
-            case 'u': e.preventDefault(); aplicarComando('underline'); break;
-            case 'z': e.preventDefault(); aplicarComando('undo'); break;
-            case 'y': e.preventDefault(); aplicarComando('redo'); break;
-            case 'k': e.preventDefault(); insertarEnlace(); break;
+            case 'b':
+                e.preventDefault();
+                document.execCommand('bold');
+                actualizarSelectores();
+                actualizarBotonesActivos();
+                break;
+            case 'i':
+                e.preventDefault();
+                document.execCommand('italic');
+                actualizarSelectores();
+                actualizarBotonesActivos();
+                break;
+            case 'u':
+                e.preventDefault();
+                document.execCommand('underline');
+                actualizarSelectores();
+                actualizarBotonesActivos();
+                break;
+            case 's':
+                // Para tachado (strikeThrough) si quieres atajo
+                if (e.shiftKey) {
+                    e.preventDefault();
+                    document.execCommand('strikeThrough');
+                    actualizarSelectores();
+                    actualizarBotonesActivos();
+                }
+                break;
+            case 'z':
+                e.preventDefault();
+                document.execCommand('undo');
+                break;
+            case 'y':
+                e.preventDefault();
+                document.execCommand('redo');
+                break;
+            case 'k':
+                e.preventDefault();
+                insertarEnlace();
+                break;
         }
     }
 }
+
 // Obtener los párrafos de referencias seleccionados o todos los que tengan clase .referencia
 function obtenerReferenciasSeleccionadas() {
     const selection = window.getSelection();
@@ -1709,19 +2105,16 @@ function procesarArchivoHtml(event) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(contenidoHtmlCompleto, 'text/html');
         
-        // Extraer el contenido principal (puede estar dentro de .documento-contenido o .contenido-convertido)
+        // Extraer el contenido principal (páginas o body)
         let contenidoExtraido = null;
-        const documentoContenido = doc.querySelector('.documento-contenido');
-        if (documentoContenido) {
-            contenidoExtraido = documentoContenido.innerHTML;
+        const paginas = doc.querySelectorAll('.pagina');
+        if (paginas.length > 0) {
+            contenidoExtraido = Array.from(paginas).map(p => p.outerHTML).join('');
         } else {
-            const contenidoConvertido = doc.querySelector('.contenido-convertido');
-            if (contenidoConvertido) {
-                contenidoExtraido = contenidoConvertido.innerHTML;
-            } else {
-                // Fallback: todo el body
-                contenidoExtraido = doc.body.innerHTML;
-            }
+            // Si no hay páginas, tomar el body y eliminar headers/footers externos
+            const bodyClone = doc.body.cloneNode(true);
+            bodyClone.querySelectorAll('.documento-header, .documento-footer, .header-integrado, .footer-integrado').forEach(el => el.remove());
+            contenidoExtraido = bodyClone.innerHTML;
         }
         
         if (!contenidoExtraido) {
@@ -1729,20 +2122,17 @@ function procesarArchivoHtml(event) {
             return;
         }
         
-        // Mostrar en la vista previa
+        // Aplicar estructura de páginas
+        const htmlEstructurado = estructurarContenido(contenidoExtraido);
+        
         const vistaDiv = document.getElementById('vistaPrevia');
         if (vistaDiv) {
-            vistaDiv.innerHTML = `<div class="contenido-convertido">${contenidoExtraido}</div>`;
-            htmlActual = contenidoExtraido;
-            
-            // Ocultar área de carga y mostrar el editor
+            vistaDiv.innerHTML = `<div class="contenido-convertido">${htmlEstructurado}</div>`;
+            htmlActual = htmlEstructurado;
             ocultarAreaCarga(true);
             document.getElementById('resultado').style.display = 'block';
-            
-            // Activar modo edición automáticamente
             habilitarEdicion();
         }
-        // Limpiar input para permitir cargar el mismo archivo otra vez
         event.target.value = '';
     };
     reader.onerror = function() {

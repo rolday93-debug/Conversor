@@ -8,7 +8,7 @@
     --success: #059669;
     --warning: #d97706;
     --danger: #dc2626;
-    --bg-body: #f1f5f9;
+    --bg-body: #cbd5e1;
     --bg-card: #ffffff;
     --bg-elevated: #f8fafc;
     --bg-hover: #f1f5f9;
@@ -56,7 +56,7 @@ body {
     background: var(--bg-card);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-xl);
-    overflow: hidden;
+    /* overflow: hidden;  ELIMINADO */
     border: 1px solid var(--border-light);
 }
 
@@ -143,6 +143,7 @@ body {
     padding: 2px;
     background: linear-gradient(135deg, transparent 40%, rgba(37,99,235,0.1) 50%, transparent 60%);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     opacity: 0;
@@ -480,7 +481,7 @@ button:hover::after {
     align-items: stretch;
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 1000; /* Aumentado */
     box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
 }
 
@@ -1061,6 +1062,73 @@ button:hover::after {
     background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
     transform: scale(1.02);
     transition: all 0.2s;
+}
+
+/* Separador visual de salto de página */
+.salto-pagina-visual {
+    margin: 2rem 0;
+    clear: both;
+}
+.salto-pagina-contenedor {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+.salto-pagina-contenedor:hover {
+    opacity: 1;
+}
+.linea-superior, .linea-inferior {
+    flex: 1;
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #94a3b8, #94a3b8, transparent);
+}
+.etiqueta-salto {
+    font-size: 0.75rem;
+    font-family: 'Inter', sans-serif;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 0.2rem 0.8rem;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+/* Modo edición: el separador no debe ser editable directamente, pero se puede seleccionar */
+.contenido-convertido[contenteditable="true"] .salto-pagina-visual {
+    user-select: none;
+    cursor: default;
+}
+
+/* Páginas independientes */
+.pagina {
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    margin: 0.25rem 0;  /* Reducido de 2rem a 0.75rem */
+    padding: 2rem;
+    border-radius: 8px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    transition: box-shadow 0.2s;
+}
+.pagina:first-child {
+    margin-top: 0;
+}
+.pagina:last-child {
+    margin-bottom: 0;
+}
+/* Pie de página dentro de cada página */
+.pie-pagina {
+    margin-top: 2rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 1rem;
+}
+/* Estilos para la edición de páginas */
+.contenido-convertido {
+    display: flex;
+    flex-direction: column;
 }
 
 /* Estilos para listas con letras y romanos */
