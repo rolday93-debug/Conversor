@@ -410,50 +410,81 @@ function initDragAndDrop() {
 // GENERAR DOCUMENTO HTML COMPLETO PARA EXPORTAR (sin estilos fijos)
 // ============================================================
 function generarDocumentoCompleto(contenidoMejorado, tituloPersonalizado) {
-    const cssExportado = `        /* Reset y base */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            background: #cbd5e1; 
-            margin: 0; 
-            padding: 0; 
-            font-family: 'Crimson Text', Georgia, serif; 
-            line-height: 1.6; 
-            color: #1e293b; 
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+    // El CSS es EXACTAMENTE el mismo que usas en la vista previa (tomado de tu estilos.css)
+    const cssExportado = `
+        /* ========== RESET Y BASE ========== */
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #3b82f6;
+            --primary-subtle: #eff6ff;
+            --secondary: #64748b;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --bg-body: #cbd5e1;
+            --bg-card: #ffffff;
+            --bg-elevated: #f8fafc;
+            --bg-hover: #f1f5f9;
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --text-inverse: #ffffff;
+            --shadow-xs: 0 1px 1px 0 rgb(0 0 0 / 0.03);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+            --radius: 10px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --radius-full: 9999px;
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
-        /* El header y footer ya no son independientes, sino parte de las páginas */
-        /* Los estilos se aplican a los elementos dentro de .pagina */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-body);
+            min-height: 100vh;
+            padding: 2rem;
+            color: var(--text-main);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ========== PÁGINAS ========== */
         .pagina {
             background: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin: 0.1rem auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+            margin: 0.25rem auto;
             padding: 2rem;
             border-radius: 8px;
-            width: 100%;
-            max-width: 1000px;
-            box-sizing: border-box;
+            max-width: 1100px;
             break-inside: avoid;
             page-break-inside: avoid;
-            position: relative;
+            transition: box-shadow 0.2s;
         }
-        .pagina:first-child {
-            margin-top: 0;
-        }
-        .pagina:last-child {
-            margin-bottom: 0;
-        }
-        
-        /* Estilo para el header dentro de la primera página */
+        .pagina:first-child { margin-top: 0; }
+        .pagina:last-child { margin-bottom: 0; }
+
+        /* ========== HEADER Y FOOTER DENTRO DE PÁGINAS ========== */
         .pagina:first-child .header-integrado {
             background: white;
             padding: 0.4rem 2rem;
             border-bottom: 2px solid;
             border-image: linear-gradient(90deg, #1e3a8a, #60a5fa, #1e3a8a) 1;
             border-image-slice: 1;
-            margin: -2rem -2rem 2rem -2rem; /* Ocupa todo el ancho del padding de la página */
+            margin: -2rem -2rem 2rem -2rem;
             border-radius: 8px 8px 0 0;
         }
         .pagina:last-child .footer-integrado {
@@ -466,8 +497,114 @@ function generarDocumentoCompleto(contenidoMejorado, tituloPersonalizado) {
             margin: 2rem -2rem -2rem -2rem;
             border-radius: 0 0 8px 8px;
         }
+        .documento-titulo {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: #0f172a;
+        }
+
+        /* ========== TABLAS - IDÉNTICAS A LA VISTA PREVIA ========== */
+        .tabla-con-bordes {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            margin: 1.5em 0;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+        }
+        .tabla-con-bordes th,
+        .tabla-con-bordes td {
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            text-align: left;
+            vertical-align: top;
+            position: relative;
+            background: white;
+        }
+        .tabla-con-bordes th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .tabla-con-bordes tr:nth-child(even) td {
+            background-color: #fafafa;
+        }
+
+        /* ========== CONTENIDO DENTRO DE CELDAS - SIN ESPACIOS EXTRA ========== */
+        .tabla-con-bordes td *,
+        .tabla-con-bordes th * {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .tabla-con-bordes td p,
+        .tabla-con-bordes th p {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .tabla-con-bordes td div,
+        .tabla-con-bordes th div {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .tabla-con-bordes td br,
+        .tabla-con-bordes th br {
+            display: block;
+            line-height: 1.2;
+        }
+        .tabla-con-bordes td ul,
+        .tabla-con-bordes td ol,
+        .tabla-con-bordes th ul,
+        .tabla-con-bordes th ol {
+            margin: 0 0 0 1.5em !important;
+            padding: 0 !important;
+        }
+        .tabla-con-bordes td li,
+        .tabla-con-bordes th li {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
         
-        /* Sangría para listas */
+        /* Respetar saltos de línea manuales */
+        .tabla-con-bordes td br,
+        .tabla-con-bordes th br {
+            display: block;
+            content: "";
+        }
+
+        /* ========== IMÁGENES ========== */
+        .pagina img:not(.icono-insertado) {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            margin: 1rem auto;
+            display: block;
+        }
+        .icono-insertado {
+            display: inline-block !important;
+            vertical-align: middle;
+            max-width: 32px;
+            max-height: 32px;
+        }
+        .logo-revista {
+            display: block;
+            margin: 1rem auto;
+            max-width: 120px;
+            opacity: 1;
+        }
+
+        /* ========== LISTAS GENERALES ========== */
         .pagina ul, .pagina ol {
             margin: 0.75em 0;
             padding-left: 2em;
@@ -476,63 +613,43 @@ function generarDocumentoCompleto(contenidoMejorado, tituloPersonalizado) {
             margin-bottom: 0.25em;
             line-height: 1.6;
         }
-        
-        /* Tablas */
-        .tabla-con-bordes { border-collapse: collapse; width: 100%; margin: 1.5em 0; border: 1px solid #e2e8f0; }
-        .tabla-con-bordes th, .tabla-con-bordes td { border: 1px solid #e2e8f0; padding: 8px 12px; vertical-align: top; }
-        .tabla-con-bordes th { background-color: #f8fafc; font-weight: 600; }
 
-        /* Imágenes normales */
-        .pagina img:not(.icono-insertado) {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            margin: 1rem auto;
-            display: block;
-        }
-        
-        /* Iconos insertados (en línea) */
-        .pagina .icono-insertado {
-            display: inline-block;
-            vertical-align: middle;
-            max-width: 32px;
-            max-height: 32px;
-            width: auto;
-            height: auto;
-            margin: 0 2px;
-        }
-        
-        /* Márgenes para secciones */
+        /* ========== MÁRGENES PARA SECCIONES ========== */
         .tipo-articulo { margin: 0.5em 0 0.5em 0; }
-        .documento-titulo { font-family: 'Georgia', 'Times New Roman', serif; font-size: 1.3rem; font-weight: 600; letter-spacing: -0.3px; margin: 0; display: flex; align-items: center; gap: 0.6rem; color: #0f172a; }
         .autor, .grupo-autores { margin: 0.5em 0; }
         .afiliacion, .grupo-afiliaciones { margin: 0.5em 0; }
         .resumen-titulo { margin: 1em 0 0.5em 0; }
         .seccion-titulo { margin: 1.5em 0 1em 0; }
-        
-        /* Saltos de página para impresión */
+
+        /* ========== SALTOS DE PÁGINA PARA IMPRESIÓN ========== */
         @media print {
             body { background: white; padding: 0; }
             .pagina { box-shadow: none; margin: 0; page-break-after: always; }
             .pagina:first-child .header-integrado { margin: 0; border-bottom: 1px solid #ccc; }
             .pagina:last-child .footer-integrado { margin: 0; border-top: 1px solid #ccc; }
-        }`;
-        
+        }
+    `;
+    
     const escapeHTML = (str) => str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]);
     
-    // Insertar header en la primera página y footer en la última
+    // Insertar header y footer (evitando duplicados)
     let htmlConPaginas = contenidoMejorado;
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlConPaginas;
     const primerasPaginas = tempDiv.querySelectorAll('.pagina');
     if (primerasPaginas.length > 0) {
-        // Insertar header al inicio de la primera página
+        // Eliminar headers/footers existentes
+        primerasPaginas.forEach(pagina => {
+            const headerExistente = pagina.querySelector('.header-integrado');
+            const footerExistente = pagina.querySelector('.footer-integrado');
+            if (headerExistente) headerExistente.remove();
+            if (footerExistente) footerExistente.remove();
+        });
+        // Insertar header en la primera página
         const primeraPagina = primerasPaginas[0];
         const headerHtml = `<div class="header-integrado"><h1 class="documento-titulo">📄 ${escapeHTML(tituloPersonalizado)}</h1></div>`;
         primeraPagina.insertAdjacentHTML('afterbegin', headerHtml);
-        
-        // Insertar footer al final de la última página
+        // Insertar footer en la última página
         const ultimaPagina = primerasPaginas[primerasPaginas.length - 1];
         const footerHtml = `<div class="footer-integrado"><p>Documento generado con Conversor Word a HTML</p></div>`;
         ultimaPagina.insertAdjacentHTML('beforeend', footerHtml);
@@ -554,7 +671,6 @@ ${cssExportado}
 </body>
 </html>`;
 }
-
 // ============================================================
 // EDITOR - FUNCIONES DE FORMATO (CON APLICACIÓN POR BLOQUES)
 // ============================================================
@@ -2109,6 +2225,13 @@ function procesarArchivoHtml(event) {
         let contenidoExtraido = null;
         const paginas = doc.querySelectorAll('.pagina');
         if (paginas.length > 0) {
+            // Eliminar headers y footers de todas las páginas
+            paginas.forEach(pagina => {
+                const headerExistente = pagina.querySelector('.header-integrado');
+                const footerExistente = pagina.querySelector('.footer-integrado');
+                if (headerExistente) headerExistente.remove();
+                if (footerExistente) footerExistente.remove();
+            });
             contenidoExtraido = Array.from(paginas).map(p => p.outerHTML).join('');
         } else {
             // Si no hay páginas, tomar el body y eliminar headers/footers externos
