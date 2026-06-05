@@ -1131,6 +1131,48 @@ button:hover::after {
     flex-direction: column;
 }
 
+.manual-wrapper {
+    position: relative;
+    background: transparent;
+    height: 0;
+}
+
+.btn-manual {
+    position: absolute;
+    right: 2rem;
+    top: -3rem;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: white;
+    z-index: 1000;
+}
+.btn-manual:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-50%) scale(1.05);
+    cursor: pointer;
+}
+.btn-manual:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .btn-manual {
+        right: 1rem;
+        font-size: 1.5rem;
+        padding: 6px;
+    }
+}
+
 /* Estilos para listas con letras y romanos */
 ol[style*="lower-alpha"] { list-style-type: lower-alpha !important; }
 ol[style*="upper-roman"] { list-style-type: upper-roman !important; }

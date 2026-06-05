@@ -2342,6 +2342,13 @@ document.addEventListener('DOMContentLoaded', function() {
         editarHtmlBtn.addEventListener('click', cargarHtmlDesdeArchivo);
         inputHtml.addEventListener('change', procesarArchivoHtml);
     }
+// Atajo de teclado F1
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'F1') {
+        e.preventDefault();
+        abrirManual();
+    }
+});
 
     document.getElementById('editarBtn').addEventListener('click', habilitarEdicion);
     document.getElementById('guardarEdicionBtn').addEventListener('click', guardarEdicion);
@@ -2388,6 +2395,10 @@ document.addEventListener('DOMContentLoaded', function() {
         reader.readAsArrayBuffer(archivo);
     });
 });
+
+function abrirManual() {
+    window.open('manual.html', '_blank');
+}
 // ============================================================
 // RECUADRO CON SweetAlert2 (sin cambios)
 // ============================================================

@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - Conversor Word a HTML</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #e9eef3 0%, #dfe4ea 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+        
+        .manual-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 35px -10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .manual-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            padding: 2rem 2.5rem;
+            position: relative;
+        }
+        
+        .manual-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .manual-header p {
+            opacity: 0.9;
+            margin-top: 0.5rem;
+        }
+        
+        .version {
+            position: absolute;
+            bottom: 1rem;
+            right: 2rem;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        
+        /* Contenido */
+        .manual-content {
+            padding: 2rem 2.5rem;
+        }
+        
+        /* Índice */
+        .indice {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .indice h2 {
+            font-size: 1.2rem;
+            color: #1e3a8a;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #3b82f6;
+            display: inline-block;
+            padding-bottom: 0.25rem;
+        }
+        
+        .indice ul {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            list-style: none;
+            margin-top: 1rem;
+        }
+        
+        .indice li a {
+            background: white;
+            padding: 0.4rem 1rem;
+            border-radius: 40px;
+            text-decoration: none;
+            color: #1e293b;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        
+        .indice li a:hover {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+            transform: translateY(-1px);
+        }
+        
+        /* Secciones */
+        .seccion {
+            margin-bottom: 2.5rem;
+            scroll-margin-top: 1rem;
+        }
+        
+        .seccion h2 {
+            font-size: 1.5rem;
+            color: #1e3a8a;
+            border-left: 4px solid #3b82f6;
+            padding-left: 1rem;
+            margin-bottom: 1.2rem;
+        }
+        
+        .seccion h3 {
+            font-size: 1.2rem;
+            color: #2563eb;
+            margin: 1rem 0 0.5rem 0;
+        }
+        
+        .seccion p {
+            margin-bottom: 0.8rem;
+            color: #334155;
+        }
+        
+        .seccion ul, .seccion ol {
+            margin: 0.8rem 0 0.8rem 2rem;
+            color: #334155;
+        }
+        
+        .seccion li {
+            margin-bottom: 0.4rem;
+        }
+        
+        /* Tablas de atajos */
+        .atajos-tabla {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: #f8fafc;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .atajos-tabla th, .atajos-tabla td {
+            border: 1px solid #e2e8f0;
+            padding: 10px 15px;
+            text-align: left;
+        }
+        
+        .atajos-tabla th {
+            background: #e2e8f0;
+            font-weight: 600;
+        }
+        
+        .badge {
+            display: inline-block;
+            background: #e2e8f0;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #1e293b;
+        }
+        
+        .nota {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        .nota-icono {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        hr {
+            margin: 2rem 0;
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+        }
+        
+        .footer {
+            background: #f8fafc;
+            padding: 1.5rem 2.5rem;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        @media (max-width: 768px) {
+            .manual-content {
+                padding: 1.5rem;
+            }
+            .manual-header {
+                padding: 1.5rem;
+            }
+            .manual-header h1 {
+                font-size: 1.5rem;
+            }
+            .indice ul {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="manual-container">
+        <div class="manual-header">
+            <h1>
+                <span>📖</span>
+                Manual de Usuario
+            </h1>
+            <p>Conversor Word a HTML Profesional</p>
+            <div class="version">Versión 1.0 SDG</div>
+        </div>
+        
+        <div class="manual-content">
+            <!-- Índice -->
+            <div class="indice">
+                <h2>📑 Contenido</h2>
+                <ul>
+                    <li><a href="#introduccion">1. Introducción</a></li>
+                    <li><a href="#conversion">2. Conversión de Word a HTML</a></li>
+                    <li><a href="#edicion">3. Edición de documentos</a></li>
+                    <li><a href="#formato">4. Formato de texto</a></li>
+                    <li><a href="#listas">5. Listas</a></li>
+                    <li><a href="#tablas">6. Tablas</a></li>
+                    <li><a href="#insercion">7. Inserción de elementos</a></li>
+                    <li><a href="#paginas">8. Páginas y saltos</a></li>
+                    <li><a href="#referencias">9. Referencias bibliográficas</a></li>
+                    <li><a href="#carga">10. Cargar HTML existente</a></li>
+                    <li><a href="#exportar">11. Exportar documento</a></li>
+                    <li><a href="#atajos">12. Atajos de teclado</a></li>
+                    <li><a href="#solucion">13. Solución de problemas</a></li>
+                </ul>
+            </div>
+            
+            <!-- 1. INTRODUCCIÓN -->
+            <div class="seccion" id="introduccion">
+                <h2>1. Introducción</h2>
+                <p>El <strong>Conversor Word a HTML Profesional</strong> es una herramienta web que permite convertir documentos <strong>.docx</strong> (Microsoft Word) a formato <strong>HTML</strong>, editarlos visualmente y exportarlos como páginas web independientes. Está especialmente diseñado para:</p>
+                <ul>
+                    <li>Artículos científicos y académicos</li>
+                    <li>Documentos con formato complejo (tablas, imágenes, referencias)</li>
+                    <li>Publicaciones web que requieren una estructura profesional</li>
+                </ul>
+                <p>La herramienta funciona completamente en el navegador, sin necesidad de instalar software adicional.</p>
+            </div>
+            
+            <!-- 2. CONVERSIÓN DE WORD A HTML -->
+            <div class="seccion" id="conversion">
+                <h2>2. Conversión de Word a HTML</h2>
+                <p>Para convertir un documento Word a HTML, sigue estos pasos:</p>
+                <ol>
+                    <li>Haz clic en el botón <strong>"📂 Seleccionar archivo"</strong> o arrastra un archivo <strong>.docx</strong> al área de carga.</li>
+                    <li>Verifica que el nombre del archivo aparezca en el campo.</li>
+                    <li>Haz clic en el botón <strong>"⚡ Convertir a HTML"</strong>.</li>
+                    <li>Espera unos segundos mientras el documento se procesa.</li>
+                    <li>El documento convertido aparecerá en la vista previa.</li>
+                </ol>
+                <div class="nota">
+                    <strong>💡 Nota:</strong> El conversor preserva el formato original del documento: negritas, cursivas, tablas, imágenes, listas, etc. También detecta automáticamente autores, afiliaciones, resúmenes y referencias.
+                </div>
+            </div>
+            
+            <!-- 3. EDICIÓN DE DOCUMENTOS -->
+            <div class="seccion" id="edicion">
+                <h2>3. Edición de documentos</h2>
+                <p>Una vez convertido o cargado un documento, puedes editarlo visualmente:</p>
+                <ul>
+                    <li>Haz clic en <strong>"✏️ Editar documento"</strong> para activar el modo edición.</li>
+                    <li>El editor se volverá azul y aparecerá una barra de herramientas en la parte superior.</li>
+                    <li>Selecciona cualquier texto para modificarlo.</li>
+                    <li>Cuando termines, haz clic en <strong>"💾 Guardar cambios"</strong> para salir del modo edición.</li>
+                </ul>
+                <p><strong>Nota:</strong> Mientras editas, el área de carga se oculta para darte más espacio de trabajo.</p>
+            </div>
+            
+            <!-- 4. FORMATO DE TEXTO -->
+            <div class="seccion" id="formato">
+                <h2>4. Formato de texto</h2>
+                <p>La barra de herramientas (pestaña <strong>"Formato"</strong>) ofrece las siguientes opciones:</p>
+                
+                <h3>🅰️ Fuente y tamaño</h3>
+                <ul>
+                    <li><strong>Tipo de letra:</strong> Times New Roman, Arial, Calibri, Georgia, etc.</li>
+                    <li><strong>Tamaño:</strong> desde 10px hasta 48px.</li>
+                </ul>
+                
+                <h3>🎨 Estilo</h3>
+                <ul>
+                    <li><strong>B (Negrita)</strong> - Aplica negrita al texto seleccionado.</li>
+                    <li><strong>I (Cursiva)</strong> - Aplica cursiva.</li>
+                    <li><strong>U (Subrayado)</strong> - Subraya el texto.</li>
+                    <li><strong>S (Tachado)</strong> - Tacha el texto.</li>
+                    <li><strong>X² (Superíndice)</strong> - Eleva el texto.</li>
+                    <li><strong>X₂ (Subíndice)</strong> - Baja el texto.</li>
+                </ul>
+                
+                <h3>⬅️➡️ Alineación</h3>
+                <ul>
+                    <li><strong>Izquierda</strong> - Alinea el texto a la izquierda.</li>
+                    <li><strong>Centro</strong> - Centra el texto.</li>
+                    <li><strong>Derecha</strong> - Alinea a la derecha.</li>
+                    <li><strong>Justificado</strong> - Justifica el texto (ambos lados).</li>
+                </ul>
+                
+                <h3>🎨 Color</h3>
+                <ul>
+                    <li>Haz clic en el botón <strong>🎨 Color</strong> y selecciona un color.</li>
+                    <li>El texto seleccionado cambiará al color elegido.</li>
+                </ul>
+                
+                <h3>🔲 Recuadro</h3>
+                <ul>
+                    <li>Selecciona un texto y haz clic en <strong>"🔲 Recuadro"</strong>.</li>
+                    <li>Se abrirá un panel para personalizar fondo, borde, grosor y radio.</li>
+                    <li>Marca <strong>"Fondo transparente"</strong> para solo aplicar el borde.</li>
+                    <li>Haz clic en <strong>"Aplicar recuadro"</strong>.</li>
+                    <li>Para eliminar el recuadro, selecciónalo y usa <strong>"❌ Quitar recuadro"</strong>.</li>
+                </ul>
+                
+                <h3>🗑️ Limpiar formato</h3>
+                <p>Elimina todos los estilos inline del texto seleccionado.</p>
+            </div>
+            
+            <!-- 5. LISTAS -->
+            <div class="seccion" id="listas">
+                <h2>5. Listas</h2>
+                <p>En el grupo <strong>"Listas"</strong> (pestaña Formato) encontrarás:</p>
+                <ul>
+                    <li><strong>• (Viñetas)</strong> - Crea listas con puntos.</li>
+                    <li><strong>1. (Numeradas)</strong> - Crea listas numeradas (1,2,3...).</li>
+                    <li><strong>a. (Letras)</strong> - Listas con letras (a,b,c...).</li>
+                    <li><strong>I. (Romanos)</strong> - Listas con números romanos (I,II,III...).</li>
+                    <li><strong>← (Disminuir sangría)</strong> - Reduce la sangría del párrafo.</li>
+                    <li><strong>→ (Aumentar sangría)</strong> - Aumenta la sangría del párrafo.</li>
+                </ul>
+                <div class="nota nota-icono">
+                    <strong>💡 Consejo:</strong> Las listas con letras y números romanos son ideales para documentos académicos y esquemas jerárquicos.
+                </div>
+            </div>
+            
+            <!-- 6. TABLAS -->
+            <div class="seccion" id="tablas">
+                <h2>6. Tablas</h2>
+                <p>Las tablas son una de las características más potentes del editor:</p>
+                
+                <h3>📊 Insertar tabla</h3>
+                <ul>
+                    <li>Haz clic en <strong>"📊 Tabla"</strong> en la pestaña Insertar.</li>
+                    <li>Elige el número de filas y columnas.</li>
+                    <li>La tabla se insertará en la posición del cursor.</li>
+                </ul>             
+                
+                <h3>🔗 Combinar celdas</h3>
+                <ul>
+                    <li>Mantén presionada la tecla <strong>Ctrl</strong> y haz clic en varias celdas.</li>
+                    <li>Las celdas se resaltarán en azul.</li>
+                    <li>Haz clic en <strong>"🔗 Combinar selección"</strong>.</li>
+                </ul>
+                
+                <h3>❌ Eliminar celdas, filas o columnas</h3>
+                <ul>
+                    <li>Selecciona una celda (clic normal).</li>
+                    <li>Haz clic en <strong>"❌ Celda"</strong>, <strong>"📄 Fila"</strong> o <strong>"📊 Columna"</strong>.</li>
+                </ul>
+                
+                <div class="nota">
+                    <strong>⚠️ Importante:</strong> Para que el redimensionamiento funcione, asegúrate de que la tabla esté en modo edición.
+                </div>
+            </div>
+            
+            <!-- 7. INSERCIÓN DE ELEMENTOS -->
+            <div class="seccion" id="insercion">
+                <h2>7. Inserción de elementos</h2>
+                <p>En la pestaña <strong>"Insertar"</strong> encontrarás varias opciones:</p>
+                
+                <h3>🖼️ Imagen</h3>
+                <ul>
+                    <li>Haz clic en <strong>"🖼️ Imagen"</strong>.</li>
+                    <li>Selecciona un archivo de imagen desde tu computadora.</li>
+                    <li>La imagen se insertará en la posición del cursor.</li>
+                    <li>Puedes redimensionarla arrastrando los puntos azules.</li>
+                </ul>
+                
+                <h3>🏷️ Icono</h3>
+                <ul>
+                    <li>Similar a insertar imagen, pero con tamaño fijo (32x32px) y en línea con el texto.</li>
+                    <li>Ideal para insertar iconos como ORCID, DOI, etc.</li>
+                </ul>
+                
+                <h3>🏷️ Logo</h3>
+                <ul>
+                    <li>Inserta un logotipo (imagen) que puedes redimensionar y ajustar opacidad.</li>
+                    <li>Los controles de tamaño y opacidad aparecen al lado.</li>
+                </ul>
+                
+                <h3>📏 Línea decorativa</h3>
+                <ul>
+                    <li>Haz clic en <strong>"📏 Línea"</strong>.</li>
+                    <li>Elige color, grosor, estilo (sólida, discontinua, punteada, doble, grabada, relieve).</li>
+                    <li>También puedes ajustar ancho (%) y margen vertical.</li>
+                    <li>Para eliminar una línea, selecciónala y usa <strong>"❌ Eliminar línea"</strong>.</li>
+                </ul>
+                
+                <h3>🔗 Enlace</h3>
+                <ul>
+                    <li>Selecciona un texto y haz clic en <strong>"🔗 Enlace"</strong>.</li>
+                    <li>Ingresa la URL y se convertirá en hipervínculo.</li>
+                </ul>
+            </div>
+            
+            <!-- 8. PÁGINAS Y SALTOS -->
+            <div class="seccion" id="paginas">
+                <h2>8. Páginas y saltos</h2>
+                <p>El editor organiza el contenido en páginas independientes:</p>
+                
+                <h3>📄 Insertar salto de página</h3>
+                <ul>
+                    <li>Coloca el cursor donde quieras dividir la página.</li>
+                    <li>Haz clic en <strong>"📄 Salto"</strong> (pestaña Insertar).</li>
+                    <li>El contenido se dividirá en dos páginas separadas.</li>
+                </ul>
+                
+                <h3>📄 Añadir pie de página</h3>
+                <ul>
+                    <li>Coloca el cursor dentro de una página.</li>
+                    <li>Haz clic en <strong>"📄 Pie"</strong> (pestaña Insertar).</li>
+                    <li>Se añadirá un área editable al final de la página para contenido adicional.</li>
+                </ul>
+                
+                <div class="nota">
+                    <strong>📌 Nota:</strong> Al exportar, la primera página mostrará el encabezado con el título del documento y la última página mostrará el pie de página predeterminado.
+                </div>
+            </div>
+            
+            <!-- 9. REFERENCIAS BIBLIOGRÁFICAS -->
+            <div class="seccion" id="referencias">
+                <h2>9. Referencias bibliográficas</h2>
+                <p>En la pestaña <strong>"Referencias"</strong> encontrarás herramientas para formatear citas:</p>
+                
+                <h3>📑 Sangría francesa</h3>
+                <p>Aplica sangría a todas las líneas excepto la primera (formato común en bibliografías).</p>
+                
+                <h3>📝 Sangría normal</h3>
+                <p>Aplica sangría solo a la primera línea de cada párrafo.</p>
+                
+                <h3>🔢 Numerar referencias</h3>
+                <p>Agrega números correlativos al inicio de cada referencia (1., 2., 3...).</p>
+                
+                <h3>📖 Estilo APA</h3>
+                <p>Formatea las referencias según el estándar APA (Times New Roman 12pt, interlineado doble, sangría francesa).</p>
+                
+                <h3>↩️ Deshacer sangría</h3>
+                <p>Reverte la última sangría aplicada a un párrafo.</p>
+                
+                <div class="nota">
+                    <strong>💡 Consejo:</strong> Selecciona primero los párrafos que deseas formatear (o deja el cursor en uno) y luego aplica la acción.
+                </div>
+            </div>
+            
+            <!-- 10. CARGAR HTML EXISTENTE -->
+            <div class="seccion" id="carga">
+                <h2>10. Cargar HTML existente</h2>
+                <p>Puedes cargar documentos HTML previamente exportados para seguir editándolos:</p>
+                <ol>
+                    <li>Haz clic en <strong>"📝 Editar HTML"</strong> (área de carga).</li>
+                    <li>Selecciona un archivo <strong>.html</strong>.</li>
+                    <li>El documento se cargará automáticamente en el editor.</li>
+                    <li>Se activará el modo edición para que puedas modificarlo.</li>
+                </ol>
+                <p>Esto es útil para corregir documentos sin tener que convertir desde Word nuevamente.</p>
+            </div>
+            
+            <!-- 11. EXPORTAR DOCUMENTO -->
+            <div class="seccion" id="exportar">
+                <h2>11. Exportar documento</h2>
+                <p>Una vez que hayas terminado de editar tu documento:</p>
+                <ol>
+                    <li>Haz clic en <strong>"⬇️ Descargar HTML"</strong> (área de acciones).</li>
+                    <li>Si estás en modo edición, se te preguntará si quieres guardar los cambios.</li>
+                    <li>El archivo HTML se descargará con el nombre que hayas especificado en el campo "Nombre del archivo".</li>
+                    <li>Abre el archivo en cualquier navegador para ver el resultado.</li>
+                </ol>
+                <div class="nota nota-icono">
+                    <strong>📁 Ubicación:</strong> El archivo se guarda en la carpeta de descargas de tu computadora.
+                </div>
+            </div>
+            
+            <!-- 12. ATAJOS DE TECLADO -->
+            <div class="seccion" id="atajos">
+                <h2>12. Atajos de teclado</h2>
+                <p>Para agilizar la edición, puedes usar los siguientes atajos (estando en modo edición):</p>
+                <table class="atajos-tabla">
+                    <thead>
+                        <tr><th>Atajo</th><th>Acción</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><span class="badge">Ctrl + B</span></td><td>Negrita</td></tr>
+                        <tr><td><span class="badge">Ctrl + I</span></td><td>Cursiva</td></tr>
+                        <tr><td><span class="badge">Ctrl + U</span></td><td>Subrayado</td></tr>
+                        <tr><td><span class="badge">Ctrl + Z</span></td><td>Deshacer última acción</td></tr>
+                        <tr><td><span class="badge">Ctrl + Y</span></td><td>Rehacer acción</td></tr>
+                        <tr><td><span class="badge">Ctrl + K</span></td><td>Insertar enlace</td></tr>
+                    </tbody>
+                </table>
+                <p><strong>Nota:</strong> Para listas y otros formatos, usa los botones de la barra de herramientas.</p>
+            </div>
+            
+            <!-- 13. SOLUCIÓN DE PROBLEMAS -->
+            <div class="seccion" id="solucion">
+                <h2>13. Solución de problemas</h2>
+                
+                <h3>❌ Las imágenes no aparecen en el HTML convertido</h3>
+                <p>Asegúrate de que el documento Word contenga imágenes insertadas normalmente (no enlazadas desde internet). Si el problema persiste, usa el botón <strong>"🖼️ Imagen"</strong> para insertarlas manualmente.</p>
+                
+                <h3>❌ La tabla se inserta al final del documento</h3>
+                <p>Coloca el cursor exactamente donde quieras la tabla antes de hacer clic en "Insertar tabla". Si el cursor está al inicio o final, la tabla se añadirá allí.</p>
+                
+                <h3>❌ No se puede deshacer la sangría</h3>
+                <p>La herramienta guarda un historial de la última sangría aplicada. Si no funciona, asegúrate de que la sangría se aplicó correctamente primero.</p>
+                
+                <h3>❌ El HTML exportado no tiene los mismos espacios que en la vista previa</h3>
+                <p>La herramienta usa exactamente los mismos estilos CSS en la exportación que en la vista previa. Si notas diferencias, verifica que no haya estilos adicionales en el documento original.</p>
+                
+                <h3>❌ Error al cargar un archivo .docx</h3>
+                <p>Comprueba que el archivo no esté dañado y que tenga la extensión correcta. Prueba a guardar el documento Word como .docx de nuevo.</p>
+                
+                <h3>❌ El botón de edición no funciona</h3>
+                <p>Asegúrate de que primero hayas convertido o cargado un documento. El modo edición solo está disponible después de tener contenido en la vista previa.</p>
+            </div>
+            
+            <hr>
+            
+            <p style="text-align: center; color: #64748b; margin-top: 2rem;">
+                Para más información o reportar errores, contacta con el desarrollador.<br>
+                © 2025 - Conversor Word a HTML Profesional
+            </p>
+        </div>
+        
+        <div class="footer">
+            Documentación oficial del Conversor Word a HTML Profesional
+        </div>
+    </div>
+</body>
+</html>
