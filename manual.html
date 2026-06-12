@@ -143,6 +143,39 @@
             margin-bottom: 0.4rem;
         }
         
+        /* >>> ESPACIO PARA CAPTURAS <<< */
+        .captura-espacio {
+            background: #f1f5f9;
+            border: 2px dashed #94a3b8;
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            text-align: center;
+            color: #64748b;
+            font-style: italic;
+            position: relative;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .captura-espacio::before {
+            content: "📸";
+            font-size: 2rem;
+            font-style: normal;
+        }
+        
+        .captura-espacio.captura-pequena {
+            min-height: 80px;
+        }
+        
+        .captura-espacio.captura-grande {
+            min-height: 250px;
+        }
+        
         /* Tablas de atajos */
         .atajos-tabla {
             width: 100%;
@@ -261,6 +294,11 @@
                     <li>Publicaciones web que requieren una estructura profesional</li>
                 </ul>
                 <p>La herramienta funciona completamente en el navegador, sin necesidad de instalar software adicional.</p>
+                
+                <!-- CAPTURA 1: Vista general de la interfaz del software -->
+                <div class="captura-espacio captura-grande">
+                    Captura 1: Vista general de la interfaz principal del Conversor Word a HTML
+                </div>
             </div>
             
             <!-- 2. CONVERSIÓN DE WORD A HTML -->
@@ -274,8 +312,19 @@
                     <li>Espera unos segundos mientras el documento se procesa.</li>
                     <li>El documento convertido aparecerá en la vista previa.</li>
                 </ol>
+                
+                <!-- CAPTURA 2: Área de carga y botón de conversión -->
+                <div class="captura-espacio">
+                    Captura 2: Área de carga de archivos y botón "Convertir a HTML"
+                </div>
+                
                 <div class="nota">
                     <strong>💡 Nota:</strong> El conversor preserva el formato original del documento: negritas, cursivas, tablas, imágenes, listas, etc. También detecta automáticamente autores, afiliaciones, resúmenes y referencias.
+                </div>
+                
+                <!-- CAPTURA 3: Documento convertido en vista previa -->
+                <div class="captura-espacio captura-grande">
+                    Captura 3: Documento Word convertido mostrándose en la vista previa
                 </div>
             </div>
             
@@ -289,7 +338,18 @@
                     <li>Selecciona cualquier texto para modificarlo.</li>
                     <li>Cuando termines, haz clic en <strong>"💾 Guardar cambios"</strong> para salir del modo edición.</li>
                 </ul>
+                
+                <!-- CAPTURA 4: Botón "Editar documento" -->
+                <div class="captura-espacio captura-pequena">
+                    Captura 4: Botón "✏️ Editar documento" en el área de acciones
+                </div>
+                
                 <p><strong>Nota:</strong> Mientras editas, el área de carga se oculta para darte más espacio de trabajo.</p>
+                
+                <!-- CAPTURA 5: Modo edición activado con barra de herramientas -->
+                <div class="captura-espacio captura-grande">
+                    Captura 5: Modo edición activado con la barra de herramientas visible
+                </div>
             </div>
             
             <!-- 4. FORMATO DE TEXTO -->
@@ -297,11 +357,21 @@
                 <h2>4. Formato de texto</h2>
                 <p>La barra de herramientas (pestaña <strong>"Formato"</strong>) ofrece las siguientes opciones:</p>
                 
+                <!-- CAPTURA 6: Pestaña "Formato" de la barra de herramientas -->
+                <div class="captura-espacio">
+                    Captura 6: Pestaña "Formato" de la barra de herramientas
+                </div>
+                
                 <h3>🅰️ Fuente y tamaño</h3>
                 <ul>
                     <li><strong>Tipo de letra:</strong> Times New Roman, Arial, Calibri, Georgia, etc.</li>
                     <li><strong>Tamaño:</strong> desde 10px hasta 48px.</li>
                 </ul>
+                
+                <!-- CAPTURA 7: Selector de fuente y tamaño -->
+                <div class="captura-espacio captura-pequena">
+                    Captura 7: Selectores de tipo de letra y tamaño de fuente
+                </div>
                 
                 <h3>🎨 Estilo</h3>
                 <ul>
@@ -313,6 +383,11 @@
                     <li><strong>X₂ (Subíndice)</strong> - Baja el texto.</li>
                 </ul>
                 
+                <!-- CAPTURA 8: Botones de estilo (Negrita, Cursiva, etc.) -->
+                <div class="captura-espacio captura-pequena">
+                    Captura 8: Botones de estilo de texto (Negrita, Cursiva, Subrayado, etc.)
+                </div>
+                
                 <h3>⬅️➡️ Alineación</h3>
                 <ul>
                     <li><strong>Izquierda</strong> - Alinea el texto a la izquierda.</li>
@@ -321,11 +396,21 @@
                     <li><strong>Justificado</strong> - Justifica el texto (ambos lados).</li>
                 </ul>
                 
+                <!-- CAPTURA 9: Botones de alineación -->
+                <div class="captura-espacio captura-pequena">
+                    Captura 9: Botones de alineación de texto
+                </div>
+                
                 <h3>🎨 Color</h3>
                 <ul>
                     <li>Haz clic en el botón <strong>🎨 Color</strong> y selecciona un color.</li>
                     <li>El texto seleccionado cambiará al color elegido.</li>
                 </ul>
+                
+                <!-- CAPTURA 10: Selector de color -->
+                <div class="captura-espacio captura-pequena">
+                    Captura 10: Selector de color de texto
+                </div>
                 
                 <h3>🔲 Recuadro</h3>
                 <ul>
@@ -335,6 +420,11 @@
                     <li>Haz clic en <strong>"Aplicar recuadro"</strong>.</li>
                     <li>Para eliminar el recuadro, selecciónalo y usa <strong>"❌ Quitar recuadro"</strong>.</li>
                 </ul>
+                
+                <!-- CAPTURA 11: Panel de recuadro -->
+                <div class="captura-espacio">
+                    Captura 11: Panel de personalización de recuadro
+                </div>
                 
                 <h3>🗑️ Limpiar formato</h3>
                 <p>Elimina todos los estilos inline del texto seleccionado.</p>
@@ -352,6 +442,12 @@
                     <li><strong>← (Disminuir sangría)</strong> - Reduce la sangría del párrafo.</li>
                     <li><strong>→ (Aumentar sangría)</strong> - Aumenta la sangría del párrafo.</li>
                 </ul>
+                
+                <!-- CAPTURA 12: Grupo "Listas" en la barra de herramientas -->
+                <div class="captura-espacio">
+                    Captura 12: Grupo "Listas" en la barra de herramientas
+                </div>
+                
                 <div class="nota nota-icono">
                     <strong>💡 Consejo:</strong> Las listas con letras y números romanos son ideales para documentos académicos y esquemas jerárquicos.
                 </div>
@@ -367,7 +463,12 @@
                     <li>Haz clic en <strong>"📊 Tabla"</strong> en la pestaña Insertar.</li>
                     <li>Elige el número de filas y columnas.</li>
                     <li>La tabla se insertará en la posición del cursor.</li>
-                </ul>             
+                </ul>
+                
+                <!-- CAPTURA 13: Botón "Tabla" y selector de filas/columnas -->
+                <div class="captura-espacio">
+                    Captura 13: Botón "📊 Tabla" y selector de filas y columnas
+                </div>
                 
                 <h3>🔗 Combinar celdas</h3>
                 <ul>
@@ -376,11 +477,21 @@
                     <li>Haz clic en <strong>"🔗 Combinar selección"</strong>.</li>
                 </ul>
                 
+                <!-- CAPTURA 14: Celdas seleccionadas y botón "Combinar" -->
+                <div class="captura-espacio">
+                    Captura 14: Celdas seleccionadas y botón "🔗 Combinar selección"
+                </div>
+                
                 <h3>❌ Eliminar celdas, filas o columnas</h3>
                 <ul>
                     <li>Selecciona una celda (clic normal).</li>
                     <li>Haz clic en <strong>"❌ Celda"</strong>, <strong>"📄 Fila"</strong> o <strong>"📊 Columna"</strong>.</li>
                 </ul>
+                
+                <!-- CAPTURA 15: Botones de eliminar celda/fila/columna -->
+                <div class="captura-espacio captura-pequena">
+                    Captura 15: Botones para eliminar celda, fila o columna
+                </div>
                 
                 <div class="nota">
                     <strong>⚠️ Importante:</strong> Para que el redimensionamiento funcione, asegúrate de que la tabla esté en modo edición.
@@ -392,6 +503,11 @@
                 <h2>7. Inserción de elementos</h2>
                 <p>En la pestaña <strong>"Insertar"</strong> encontrarás varias opciones:</p>
                 
+                <!-- CAPTURA 16: Pestaña "Insertar" completa -->
+                <div class="captura-espacio">
+                    Captura 16: Pestaña "Insertar" de la barra de herramientas
+                </div>
+                
                 <h3>🖼️ Imagen</h3>
                 <ul>
                     <li>Haz clic en <strong>"🖼️ Imagen"</strong>.</li>
@@ -400,17 +516,32 @@
                     <li>Puedes redimensionarla arrastrando los puntos azules.</li>
                 </ul>
                 
+                <!-- CAPTURA 17: Imagen insertada con puntos de redimensionamiento -->
+                <div class="captura-espacio">
+                    Captura 17: Imagen insertada con puntos de redimensionamiento visibles
+                </div>
+                
                 <h3>🏷️ Icono</h3>
                 <ul>
                     <li>Similar a insertar imagen, pero con tamaño fijo (32x32px) y en línea con el texto.</li>
                     <li>Ideal para insertar iconos como ORCID, DOI, etc.</li>
                 </ul>
                 
+                <!-- CAPTURA 18: Icono insertado en línea -->
+                <div class="captura-espacio captura-pequena">
+                    Captura 18: Icono insertado en línea con el texto (ej. ORCID)
+                </div>
+                
                 <h3>🏷️ Logo</h3>
                 <ul>
                     <li>Inserta un logotipo (imagen) que puedes redimensionar y ajustar opacidad.</li>
                     <li>Los controles de tamaño y opacidad aparecen al lado.</li>
                 </ul>
+                
+                <!-- CAPTURA 19: Logo insertado con controles de opacidad -->
+                <div class="captura-espacio">
+                    Captura 19: Logo insertado con controles de tamaño y opacidad
+                </div>
                 
                 <h3>📏 Línea decorativa</h3>
                 <ul>
@@ -420,11 +551,21 @@
                     <li>Para eliminar una línea, selecciónala y usa <strong>"❌ Eliminar línea"</strong>.</li>
                 </ul>
                 
+                <!-- CAPTURA 20: Panel de línea decorativa -->
+                <div class="captura-espacio">
+                    Captura 20: Panel de personalización de línea decorativa
+                </div>
+                
                 <h3>🔗 Enlace</h3>
                 <ul>
                     <li>Selecciona un texto y haz clic en <strong>"🔗 Enlace"</strong>.</li>
                     <li>Ingresa la URL y se convertirá en hipervínculo.</li>
                 </ul>
+                
+                <!-- CAPTURA 21: Diálogo de inserción de enlace -->
+                <div class="captura-espacio captura-pequena">
+                    Captura 21: Cuadro de diálogo para insertar enlace
+                </div>
             </div>
             
             <!-- 8. PÁGINAS Y SALTOS -->
@@ -439,12 +580,22 @@
                     <li>El contenido se dividirá en dos páginas separadas.</li>
                 </ul>
                 
+                <!-- CAPTURA 22: Botón "Salto" y resultado -->
+                <div class="captura-espacio">
+                    Captura 22: Botón "📄 Salto" y documento dividido en páginas
+                </div>
+                
                 <h3>📄 Añadir pie de página</h3>
                 <ul>
                     <li>Coloca el cursor dentro de una página.</li>
                     <li>Haz clic en <strong>"📄 Pie"</strong> (pestaña Insertar).</li>
                     <li>Se añadirá un área editable al final de la página para contenido adicional.</li>
                 </ul>
+                
+                <!-- CAPTURA 23: Pie de página añadido -->
+                <div class="captura-espacio">
+                    Captura 23: Pie de página añadido al final de la página
+                </div>
                 
                 <div class="nota">
                     <strong>📌 Nota:</strong> Al exportar, la primera página mostrará el encabezado con el título del documento y la última página mostrará el pie de página predeterminado.
@@ -455,6 +606,11 @@
             <div class="seccion" id="referencias">
                 <h2>9. Referencias bibliográficas</h2>
                 <p>En la pestaña <strong>"Referencias"</strong> encontrarás herramientas para formatear citas:</p>
+                
+                <!-- CAPTURA 24: Pestaña "Referencias" -->
+                <div class="captura-espacio">
+                    Captura 24: Pestaña "Referencias" de la barra de herramientas
+                </div>
                 
                 <h3>📑 Sangría francesa</h3>
                 <p>Aplica sangría a todas las líneas excepto la primera (formato común en bibliografías).</p>
@@ -467,6 +623,11 @@
                 
                 <h3>📖 Estilo APA</h3>
                 <p>Formatea las referencias según el estándar APA (Times New Roman 12pt, interlineado doble, sangría francesa).</p>
+                
+                <!-- CAPTURA 25: Referencias formateadas en estilo APA -->
+                <div class="captura-espacio captura-grande">
+                    Captura 25: Referencias bibliográficas formateadas en estilo APA
+                </div>
                 
                 <h3>↩️ Deshacer sangría</h3>
                 <p>Reverte la última sangría aplicada a un párrafo.</p>
@@ -486,6 +647,12 @@
                     <li>El documento se cargará automáticamente en el editor.</li>
                     <li>Se activará el modo edición para que puedas modificarlo.</li>
                 </ol>
+                
+                <!-- CAPTURA 26: Botón "Editar HTML" -->
+                <div class="captura-espacio captura-pequena">
+                    Captura 26: Botón "📝 Editar HTML" en el área de carga
+                </div>
+                
                 <p>Esto es útil para corregir documentos sin tener que convertir desde Word nuevamente.</p>
             </div>
             
@@ -499,8 +666,19 @@
                     <li>El archivo HTML se descargará con el nombre que hayas especificado en el campo "Nombre del archivo".</li>
                     <li>Abre el archivo en cualquier navegador para ver el resultado.</li>
                 </ol>
+                
+                <!-- CAPTURA 27: Botón "Descargar HTML" -->
+                <div class="captura-espacio captura-pequena">
+                    Captura 27: Botón "⬇️ Descargar HTML" y campo de nombre de archivo
+                </div>
+                
                 <div class="nota nota-icono">
                     <strong>📁 Ubicación:</strong> El archivo se guarda en la carpeta de descargas de tu computadora.
+                </div>
+                
+                <!-- CAPTURA 28: Archivo HTML exportado abierto en navegador -->
+                <div class="captura-espacio captura-grande">
+                    Captura 28: Archivo HTML exportado abierto en el navegador
                 </div>
             </div>
             
@@ -530,6 +708,11 @@
                 
                 <h3>❌ Las imágenes no aparecen en el HTML convertido</h3>
                 <p>Asegúrate de que el documento Word contenga imágenes insertadas normalmente (no enlazadas desde internet). Si el problema persiste, usa el botón <strong>"🖼️ Imagen"</strong> para insertarlas manualmente.</p>
+                
+                <!-- CAPTURA 29: Ejemplo de imagen insertada manualmente -->
+                <div class="captura-espacio">
+                    Captura 29: Inserción manual de imagen como solución
+                </div>
                 
                 <h3>❌ La tabla se inserta al final del documento</h3>
                 <p>Coloca el cursor exactamente donde quieras la tabla antes de hacer clic en "Insertar tabla". Si el cursor está al inicio o final, la tabla se añadirá allí.</p>

@@ -1,5 +1,5 @@
 // ============================================================
-// CONVERSOR WORD A HTML - VERSIÓN LIMPIA (SIN ESTILOS FIJOS)
+// CONVERSOR WORD A HTML - VERSIÓN CON EXPORTACIÓN DE IMÁGENES
 // ============================================================
 
 let modoEdicion = false;
@@ -12,6 +12,449 @@ let savedSelection = null;
 let ultimoBloqueSangria = null;
 let htmlAntesSangria = null;
 let ultimoBloqueSangriaTexto = null;
+let contadorImagenesGlobal = 0;
+
+// ============================================================
+// NUEVAS FUNCIONES PARA MANEJO DE IMÁGENES Y ZIP
+// ============================================================
+
+// Genera un ID único para cada imagen
+function generarIdUnico() {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 10);
+    contadorImagenesGlobal++;
+    return `img_${timestamp}_${random}_${contadorImagenesGlobal}`;
+}
+
+// Convierte base64 a Blob
+function base64ToBlob(base64) {
+    const partes = base64.split(';base64,');
+    const contentType = partes[0].split(':')[1];
+    const raw = window.atob(partes[1]);
+    const rawLength = raw.length;
+    const uInt8Array = new Uint8Array(rawLength);
+    for (let i = 0; i < rawLength; i++) {
+        uInt8Array[i] = raw.charCodeAt(i);
+    }
+    return new Blob([uInt8Array], { type: contentType });
+}
+
+// Procesa todas las imágenes del HTML y prepara datos para el ZIP
+async function procesarImagenesYGenerarZip(htmlContent, nombreArchivo) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    const imagenes = doc.querySelectorAll('img');
+    
+    const imagenesProcesadas = [];
+    const reemplazos = new Map();
+    
+    for (let i = 0; i < imagenes.length; i++) {
+        const img = imagenes[i];
+        const src = img.getAttribute('src');
+        
+        // Solo procesar imágenes base64 o rutas locales
+        if (src && src.startsWith('data:image')) {
+            const uniqueId = generarIdUnico();
+            const mimeMatch = src.match(/data:image\/(\w+);base64,/);
+            let extension = 'png';
+            if (mimeMatch && mimeMatch[1]) {
+                extension = mimeMatch[1].toLowerCase();
+                if (extension === 'jpeg') extension = 'jpg';
+            }
+            
+            const nuevoNombre = `${uniqueId}.${extension}`;
+            const rutaRelativa = `imagenes/${nuevoNombre}`;
+            const blob = base64ToBlob(src);
+            
+            imagenesProcesadas.push({
+                nombre: nuevoNombre,
+                blob: blob,
+                rutaRelativa: rutaRelativa,
+                id: uniqueId
+            });
+            
+            reemplazos.set(src, rutaRelativa);
+        } else if (src && !src.startsWith('data:') && !src.startsWith('http') && !src.startsWith('https')) {
+            // Si ya es una ruta relativa, asegurar que apunte a la carpeta imagenes/
+            if (!src.includes('imagenes/')) {
+                const nombreArchivoImagen = src.split('/').pop();
+                const rutaRelativa = `imagenes/${nombreArchivoImagen}`;
+                reemplazos.set(src, rutaRelativa);
+            }
+        }
+    }
+    
+    // Reemplazar todas las rutas en el HTML
+    let htmlModificado = htmlContent;
+    for (const [oldSrc, newSrc] of reemplazos) {
+        const escapedOldSrc = oldSrc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedOldSrc, 'g');
+        htmlModificado = htmlModificado.replace(regex, newSrc);
+    }
+    
+    return {
+        html: htmlModificado,
+        imagenes: imagenesProcesadas
+    };
+}
+
+// Genera el archivo HTML completo con codificación UTF-8
+function generarDocumentoCompletoConImagenes(contenidoMejorado, tituloPersonalizado, hayImagenes = false) {
+    const cssExportado = `
+        /* ========== RESET Y BASE ========== */
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #3b82f6;
+            --primary-subtle: #eff6ff;
+            --secondary: #64748b;
+            --success: #059669;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --bg-body: #cbd5e1;
+            --bg-card: #ffffff;
+            --bg-elevated: #f8fafc;
+            --bg-hover: #f1f5f9;
+            --border: #e2e8f0;
+            --border-light: #f1f5f9;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --text-inverse: #ffffff;
+            --shadow-xs: 0 1px 1px 0 rgb(0 0 0 / 0.03);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+            --radius: 10px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --radius-full: 9999px;
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-body);
+            min-height: 100vh;
+            padding: 2rem;
+            color: var(--text-main);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .pagina {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+            margin: 0.25rem auto;
+            padding: 2rem;
+            border-radius: 8px;
+            max-width: 1100px;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            transition: box-shadow 0.2s;
+        }
+        .pagina:first-child { margin-top: 0; }
+        .pagina:last-child { margin-bottom: 0; }
+
+        .pagina:first-child .header-integrado {
+            background: white;
+            padding: 0.4rem 2rem;
+            border-bottom: 2px solid;
+            border-image: linear-gradient(90deg, #1e3a8a, #60a5fa, #1e3a8a) 1;
+            border-image-slice: 1;
+            margin: -2rem -2rem 2rem -2rem;
+            border-radius: 8px 8px 0 0;
+        }
+        .pagina:last-child .footer-integrado {
+            background: #f8fafc;
+            padding: 1rem 2rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+            margin: 2rem -2rem -2rem -2rem;
+            border-radius: 0 0 8px 8px;
+        }
+        .documento-titulo {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: #0f172a;
+        }
+
+        .tabla-con-bordes {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            margin: 1.5em 0;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+        }
+        .tabla-con-bordes th,
+        .tabla-con-bordes td {
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            text-align: left;
+            vertical-align: top;
+            position: relative;
+            background: white;
+        }
+        .tabla-con-bordes th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .tabla-con-bordes tr:nth-child(even) td {
+            background-color: #fafafa;
+        }
+
+        .pagina img:not(.icono-insertado) {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            margin: 1rem auto;
+            display: block;
+        }
+        .icono-insertado {
+            display: inline-block !important;
+            vertical-align: middle;
+            max-width: 32px;
+            max-height: 32px;
+        }
+        .logo-revista {
+            display: block;
+            margin: 1rem auto;
+            max-width: 120px;
+            opacity: 1;
+        }
+
+        .pagina ul, .pagina ol {
+            margin: 0.75em 0;
+            padding-left: 2em;
+        }
+        .pagina li {
+            margin-bottom: 0.25em;
+            line-height: 1.6;
+        }
+
+        .tipo-articulo { margin: 0.5em 0 0.5em 0; }
+        .autor, .grupo-autores { margin: 0.5em 0; }
+        .afiliacion, .grupo-afiliaciones { margin: 0.5em 0; }
+        .resumen-titulo { margin: 1em 0 0.5em 0; }
+        .seccion-titulo { margin: 1.5em 0 1em 0; }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .pagina { box-shadow: none; margin: 0; page-break-after: always; }
+            .pagina:first-child .header-integrado { margin: 0; border-bottom: 1px solid #ccc; }
+            .pagina:last-child .footer-integrado { margin: 0; border-top: 1px solid #ccc; }
+        }
+    `;
+    
+    const escapeHTML = (str) => str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]);
+    
+    let htmlConPaginas = contenidoMejorado;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlConPaginas;
+    const primerasPaginas = tempDiv.querySelectorAll('.pagina');
+    if (primerasPaginas.length > 0) {
+        primerasPaginas.forEach(pagina => {
+            const headerExistente = pagina.querySelector('.header-integrado');
+            const footerExistente = pagina.querySelector('.footer-integrado');
+            if (headerExistente) headerExistente.remove();
+            if (footerExistente) footerExistente.remove();
+        });
+        const primeraPagina = primerasPaginas[0];
+        const headerHtml = `<div class="header-integrado"><h1 class="documento-titulo">📄 ${escapeHTML(tituloPersonalizado)}</h1></div>`;
+        primeraPagina.insertAdjacentHTML('afterbegin', headerHtml);
+        const ultimaPagina = primerasPaginas[primerasPaginas.length - 1];
+        const footerHtml = `<div class="footer-integrado"><p>Documento generado con Conversor Word a HTML</p></div>`;
+        ultimaPagina.insertAdjacentHTML('beforeend', footerHtml);
+    }
+    htmlConPaginas = tempDiv.innerHTML;
+    
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${escapeHTML(tituloPersonalizado)}</title>
+    <style>
+${cssExportado}
+    </style>
+</head>
+<body>
+    ${htmlConPaginas}
+</body>
+</html>`;
+}
+
+// ============================================================
+// CONFIGURACIÓN DE DESCARGA CON SOPORTE PARA ZIP
+// ============================================================
+async function configurarDescarga() {
+    const descargarBtn = document.getElementById('descargarBtn');
+    const descargarZipBtn = document.getElementById('descargarZipBtn');
+    
+    if (!descargarBtn) return;
+    
+    // Descarga simple HTML (sin imágenes empaquetadas)
+    descargarBtn.onclick = async () => {
+        if (modoEdicion) {
+            const result = await Swal.fire({
+                title: '¿Guardar cambios?',
+                text: 'Estás en modo edición. ¿Guardar antes de descargar?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#059669',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, guardar',
+                cancelButtonText: 'No, descargar sin guardar'
+            });
+            if (result.isConfirmed) guardarEdicion();
+        }
+        
+        const finalHtml = obtenerContenidoEditable()?.innerHTML || htmlActual;
+        let nombreArchivoSalida = document.getElementById('nombreArchivo').value.trim();
+        if (nombreArchivoSalida === '') nombreArchivoSalida = 'documento_editado';
+        
+        const documentoCompleto = generarDocumentoCompletoConImagenes(finalHtml, nombreArchivoSalida);
+        const blob = new Blob([documentoCompleto], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = nombreArchivoSalida + '.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Descarga completada',
+            text: `Archivo guardado como ${nombreArchivoSalida}.html`,
+            confirmButtonColor: '#059669',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    };
+    
+    // Descarga ZIP con imágenes
+    if (descargarZipBtn) {
+        descargarZipBtn.onclick = async () => {
+            if (modoEdicion) {
+                const result = await Swal.fire({
+                    title: '¿Guardar cambios?',
+                    text: 'Estás en modo edición. ¿Guardar antes de exportar?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#059669',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Sí, guardar',
+                    cancelButtonText: 'No, exportar sin guardar'
+                });
+                if (result.isConfirmed) guardarEdicion();
+            }
+            
+            const finalHtml = obtenerContenidoEditable()?.innerHTML || htmlActual;
+            let nombreArchivoSalida = document.getElementById('nombreArchivo').value.trim();
+            if (nombreArchivoSalida === '') nombreArchivoSalida = 'documento_editado';
+            
+            // Mostrar loading
+            Swal.fire({
+                title: 'Procesando imágenes...',
+                text: 'Empaquetando archivos, por favor espera',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            
+            try {
+                // Procesar imágenes y generar HTML con rutas relativas
+                const { html: htmlConRutas, imagenes } = await procesarImagenesYGenerarZip(finalHtml, nombreArchivoSalida);
+                
+                // Generar el documento HTML completo
+                const documentoCompleto = generarDocumentoCompletoConImagenes(htmlConRutas, nombreArchivoSalida, imagenes.length > 0);
+                
+                // Crear el ZIP
+                const zip = new JSZip();
+                zip.file(`${nombreArchivoSalida}.html`, documentoCompleto);
+                
+                // Añadir carpeta de imágenes si hay imágenes
+                if (imagenes.length > 0) {
+                    const imagenesFolder = zip.folder("imagenes");
+                    for (const img of imagenes) {
+                        imagenesFolder.file(img.nombre, img.blob);
+                    }
+                }
+                
+                // Generar y descargar el ZIP
+                const content = await zip.generateAsync({ type: "blob" });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(content);
+                a.download = `${nombreArchivoSalida}.zip`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Exportación completada',
+                    html: `Archivo guardado como <strong>${nombreArchivoSalida}.zip</strong><br>${imagenes.length} imagen(es) empaquetada(s)`,
+                    confirmButtonColor: '#059669'
+                });
+            } catch (error) {
+                console.error('Error al crear ZIP:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al exportar',
+                    text: 'Ocurrió un error al empaquetar las imágenes',
+                    confirmButtonColor: '#ef4444'
+                });
+            }
+        };
+    }
+}
+
+// ============================================================
+// FUNCIÓN PARA DETECTAR IMÁGENES Y MOSTRAR BOTÓN ZIP
+// ============================================================
+function actualizarBotonZip() {
+    const contenido = obtenerContenidoEditable();
+    const descargarZipBtn = document.getElementById('descargarZipBtn');
+    if (!descargarZipBtn) return;
+    
+    if (contenido) {
+        const imagenes = contenido.querySelectorAll('img');
+        const hayImagenesBase64 = Array.from(imagenes).some(img => {
+            const src = img.getAttribute('src');
+            return src && src.startsWith('data:image');
+        });
+        
+        if (imagenes.length > 0 && hayImagenesBase64) {
+            descargarZipBtn.style.display = 'inline-flex';
+        } else {
+            descargarZipBtn.style.display = 'none';
+        }
+    } else {
+        descargarZipBtn.style.display = 'none';
+    }
+}
 
 // ============================================================
 // UTILIDADES DE SELECCIÓN
@@ -67,8 +510,9 @@ function crearConvertidorImagenes() {
             });
     });
 }
+
 // ============================================================
-// LIMPIEZA DE NEGRITAS Y ESTILOS FIJOS EN RESUMEN (opcional)
+// LIMPIEZA DE ESTILOS
 // ============================================================
 function limpiarEstilosResumen(htmlFragment) {
     const tempDiv = document.createElement('div');
@@ -103,9 +547,6 @@ function limpiarEstilosResumen(htmlFragment) {
     return tempDiv.innerHTML;
 }
 
-// ============================================================
-// ELIMINAR ESTILOS FORZADOS EN SECCIONES (MÉTODOS, RESULTADOS...)
-// ============================================================
 function limpiarEstilosSecciones(htmlFragment) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlFragment;
@@ -139,9 +580,6 @@ function limpiarEstilosSecciones(htmlFragment) {
     return tempDiv.innerHTML;
 }
 
-// ============================================================
-// AGRUPAR AUTORES Y AFILIACIONES EN RECUADROS ÚNICOS
-// ============================================================
 function agruparSeccionesContinuas(htmlFragment) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlFragment;
@@ -173,9 +611,6 @@ function agruparSeccionesContinuas(htmlFragment) {
     return tempDiv.innerHTML;
 }
 
-// ============================================================
-// LISTAS CON LETRAS Y ROMANOS
-// ============================================================
 function aplicarListaLetras() {
     const contenido = obtenerContenidoEditable();
     if (!contenido || contenido.contentEditable !== 'true') {
@@ -187,18 +622,14 @@ function aplicarListaLetras() {
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
     
-    // Verificar si ya estamos dentro de una lista ordenada (ol)
     let node = selection.getRangeAt(0).commonAncestorContainer;
     if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
     let lista = node.closest('ol, ul');
     
     if (lista && lista.tagName === 'OL') {
-        // Si ya es una lista ordenada, solo cambiar el estilo
         lista.style.listStyleType = 'lower-alpha';
     } else {
-        // Si no, crear una nueva lista ordenada con el estilo de letras
         document.execCommand('insertOrderedList', false, null);
-        // Buscar la lista recién creada y aplicar estilo
         lista = contenido.querySelector('ol:last-of-type');
         if (lista) lista.style.listStyleType = 'lower-alpha';
     }
@@ -227,9 +658,7 @@ function aplicarListaRomanos() {
         if (lista) lista.style.listStyleType = 'upper-roman';
     }
 }
-// ============================================================
-// ASIGNAR CLASE .resumen-contenido A LOS PÁRRAFOS DEL RESUMEN
-// ============================================================
+
 function agruparResumen(htmlFragment) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlFragment;
@@ -244,9 +673,25 @@ function agruparResumen(htmlFragment) {
     return tempDiv.innerHTML;
 }
 
-// ============================================================
-// MEJORA ESTRUCTURAL DEL HTML
-// ============================================================
+function procesarSaltosPagina(htmlFragment) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlFragment;
+    const pageBreaks = tempDiv.querySelectorAll('div[style*="page-break-before: always"]');
+    pageBreaks.forEach(div => {
+        const separator = document.createElement('div');
+        separator.className = 'salto-pagina-visual';
+        separator.innerHTML = `
+            <div class="salto-pagina-contenedor">
+                <hr class="linea-superior">
+                <span class="etiqueta-salto">📄 Salto de página</span>
+                <hr class="linea-inferior">
+            </div>
+        `;
+        div.parentNode.replaceChild(separator, div);
+    });
+    return tempDiv.innerHTML;
+}
+
 function mejorarEstructuraHTML(htmlFragment) {
     const tempDiv = document.createElement('div');
     tempDiv.className = 'contenido-convertido';
@@ -294,60 +739,27 @@ function mejorarEstructuraHTML(htmlFragment) {
     htmlResultado = agruparSeccionesContinuas(htmlResultado);
     htmlResultado = agruparResumen(htmlResultado);
     htmlResultado = procesarSaltosPagina(htmlResultado);
-    // Envolver el contenido en páginas si no hay ninguna
-const tempDiv2 = document.createElement('div');
-tempDiv2.innerHTML = htmlResultado;
-if (!tempDiv2.querySelector('.pagina')) {
-    const contenido = tempDiv2.innerHTML;
-    tempDiv2.innerHTML = `<div class="pagina">${contenido}</div>`;
-}
-htmlResultado = tempDiv2.innerHTML;
-
+    const tempDiv2 = document.createElement('div');
+    tempDiv2.innerHTML = htmlResultado;
+    if (!tempDiv2.querySelector('.pagina')) {
+        const contenido = tempDiv2.innerHTML;
+        tempDiv2.innerHTML = `<div class="pagina">${contenido}</div>`;
+    }
+    htmlResultado = tempDiv2.innerHTML;
     return htmlResultado;
 }
 
-function procesarSaltosPagina(htmlFragment) {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlFragment;
-    
-    // Buscar todos los divs con page-break-before: always
-    const pageBreaks = tempDiv.querySelectorAll('div[style*="page-break-before: always"]');
-    pageBreaks.forEach(div => {
-        // Crear un elemento separador visual
-        const separator = document.createElement('div');
-        separator.className = 'salto-pagina-visual';
-        separator.innerHTML = `
-            <div class="salto-pagina-contenedor">
-                <hr class="linea-superior">
-                <span class="etiqueta-salto">📄 Salto de página</span>
-                <hr class="linea-inferior">
-            </div>
-        `;
-        // Reemplazar el div original por el separador
-        div.parentNode.replaceChild(separator, div);
-    });
-    
-    return tempDiv.innerHTML;
-}
-
 function estructurarContenido(htmlFragment) {
-    // Procesar saltos de página (convierte divs con page-break en separadores)
     let html = procesarSaltosPagina(htmlFragment);
-    
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
-    
-    // Si no hay ninguna página, envolver todo en una
     if (!tempDiv.querySelector('.pagina')) {
         const contenido = tempDiv.innerHTML;
         tempDiv.innerHTML = `<div class="pagina">${contenido}</div>`;
     }
-    
-    // Asegurar que las páginas tengan contenteditable="true" para edición
     tempDiv.querySelectorAll('.pagina').forEach(pag => {
         pag.setAttribute('contenteditable', 'true');
     });
-    
     return tempDiv.innerHTML;
 }
 
@@ -355,7 +767,6 @@ function initDragAndDrop() {
     const dropZone = document.querySelector('.upload-zone');
     if (!dropZone) return;
 
-    // Prevenir comportamiento por defecto del navegador para eventos de arrastre
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropZone.addEventListener(eventName, (e) => {
             e.preventDefault();
@@ -363,7 +774,6 @@ function initDragAndDrop() {
         });
     });
 
-    // Resaltar zona al arrastrar
     ['dragenter', 'dragover'].forEach(eventName => {
         dropZone.addEventListener(eventName, () => {
             dropZone.classList.add('drag-over');
@@ -375,19 +785,15 @@ function initDragAndDrop() {
         });
     });
 
-    // Capturar el archivo soltado
     dropZone.addEventListener('drop', (e) => {
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             const file = files[0];
             if (file.name.endsWith('.docx')) {
                 const fileInput = document.getElementById('inputWord');
-                // Asignar el archivo al input
                 fileInput.files = files;
-                // Actualizar el texto del span con el nombre
                 const fileNameSpan = document.getElementById('nombreArchivoSeleccionado');
                 if (fileNameSpan) fileNameSpan.textContent = file.name;
-                // Mensaje de éxito
                 Swal.fire({
                     icon: 'success',
                     title: 'Archivo cargado',
@@ -406,283 +812,17 @@ function initDragAndDrop() {
         }
     });
 }
+
 // ============================================================
-// GENERAR DOCUMENTO HTML COMPLETO PARA EXPORTAR (sin estilos fijos)
-// ============================================================
-function generarDocumentoCompleto(contenidoMejorado, tituloPersonalizado) {
-    // El CSS es EXACTAMENTE el mismo que usas en la vista previa (tomado de tu estilos.css)
-    const cssExportado = `
-        /* ========== RESET Y BASE ========== */
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --primary-light: #3b82f6;
-            --primary-subtle: #eff6ff;
-            --secondary: #64748b;
-            --success: #059669;
-            --warning: #d97706;
-            --danger: #dc2626;
-            --bg-body: #cbd5e1;
-            --bg-card: #ffffff;
-            --bg-elevated: #f8fafc;
-            --bg-hover: #f1f5f9;
-            --border: #e2e8f0;
-            --border-light: #f1f5f9;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --text-inverse: #ffffff;
-            --shadow-xs: 0 1px 1px 0 rgb(0 0 0 / 0.03);
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
-            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
-            --radius: 10px;
-            --radius-md: 12px;
-            --radius-lg: 16px;
-            --radius-xl: 20px;
-            --radius-full: 9999px;
-            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-            --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-            --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg-body);
-            min-height: 100vh;
-            padding: 2rem;
-            color: var(--text-main);
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* ========== PÁGINAS ========== */
-        .pagina {
-            background: white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-            margin: 0.25rem auto;
-            padding: 2rem;
-            border-radius: 8px;
-            max-width: 1100px;
-            break-inside: avoid;
-            page-break-inside: avoid;
-            transition: box-shadow 0.2s;
-        }
-        .pagina:first-child { margin-top: 0; }
-        .pagina:last-child { margin-bottom: 0; }
-
-        /* ========== HEADER Y FOOTER DENTRO DE PÁGINAS ========== */
-        .pagina:first-child .header-integrado {
-            background: white;
-            padding: 0.4rem 2rem;
-            border-bottom: 2px solid;
-            border-image: linear-gradient(90deg, #1e3a8a, #60a5fa, #1e3a8a) 1;
-            border-image-slice: 1;
-            margin: -2rem -2rem 2rem -2rem;
-            border-radius: 8px 8px 0 0;
-        }
-        .pagina:last-child .footer-integrado {
-            background: #f8fafc;
-            padding: 1rem 2rem;
-            text-align: center;
-            font-size: 0.75rem;
-            color: #64748b;
-            border-top: 1px solid #e2e8f0;
-            margin: 2rem -2rem -2rem -2rem;
-            border-radius: 0 0 8px 8px;
-        }
-        .documento-titulo {
-            font-family: 'Georgia', 'Times New Roman', serif;
-            font-size: 1.3rem;
-            font-weight: 600;
-            letter-spacing: -0.3px;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            color: #0f172a;
-        }
-
-        /* ========== TABLAS - IDÉNTICAS A LA VISTA PREVIA ========== */
-        .tabla-con-bordes {
-            border-collapse: separate;
-            border-spacing: 0;
-            width: 100%;
-            margin: 1.5em 0;
-            border-radius: var(--radius);
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--border);
-        }
-        .tabla-con-bordes th,
-        .tabla-con-bordes td {
-            border: 1px solid var(--border);
-            padding: 12px 16px;
-            text-align: left;
-            vertical-align: top;
-            position: relative;
-            background: white;
-        }
-        .tabla-con-bordes th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-        }
-        .tabla-con-bordes tr:nth-child(even) td {
-            background-color: #fafafa;
-        }
-
-        /* ========== CONTENIDO DENTRO DE CELDAS - SIN ESPACIOS EXTRA ========== */
-        .tabla-con-bordes td *,
-        .tabla-con-bordes th * {
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        .tabla-con-bordes td p,
-        .tabla-con-bordes th p {
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        .tabla-con-bordes td div,
-        .tabla-con-bordes th div {
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        .tabla-con-bordes td br,
-        .tabla-con-bordes th br {
-            display: block;
-            line-height: 1.2;
-        }
-        .tabla-con-bordes td ul,
-        .tabla-con-bordes td ol,
-        .tabla-con-bordes th ul,
-        .tabla-con-bordes th ol {
-            margin: 0 0 0 1.5em !important;
-            padding: 0 !important;
-        }
-        .tabla-con-bordes td li,
-        .tabla-con-bordes th li {
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        
-        /* Respetar saltos de línea manuales */
-        .tabla-con-bordes td br,
-        .tabla-con-bordes th br {
-            display: block;
-            content: "";
-        }
-
-        /* ========== IMÁGENES ========== */
-        .pagina img:not(.icono-insertado) {
-            max-width: 100%;
-            height: auto;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-md);
-            margin: 1rem auto;
-            display: block;
-        }
-        .icono-insertado {
-            display: inline-block !important;
-            vertical-align: middle;
-            max-width: 32px;
-            max-height: 32px;
-        }
-        .logo-revista {
-            display: block;
-            margin: 1rem auto;
-            max-width: 120px;
-            opacity: 1;
-        }
-
-        /* ========== LISTAS GENERALES ========== */
-        .pagina ul, .pagina ol {
-            margin: 0.75em 0;
-            padding-left: 2em;
-        }
-        .pagina li {
-            margin-bottom: 0.25em;
-            line-height: 1.6;
-        }
-
-        /* ========== MÁRGENES PARA SECCIONES ========== */
-        .tipo-articulo { margin: 0.5em 0 0.5em 0; }
-        .autor, .grupo-autores { margin: 0.5em 0; }
-        .afiliacion, .grupo-afiliaciones { margin: 0.5em 0; }
-        .resumen-titulo { margin: 1em 0 0.5em 0; }
-        .seccion-titulo { margin: 1.5em 0 1em 0; }
-
-        /* ========== SALTOS DE PÁGINA PARA IMPRESIÓN ========== */
-        @media print {
-            body { background: white; padding: 0; }
-            .pagina { box-shadow: none; margin: 0; page-break-after: always; }
-            .pagina:first-child .header-integrado { margin: 0; border-bottom: 1px solid #ccc; }
-            .pagina:last-child .footer-integrado { margin: 0; border-top: 1px solid #ccc; }
-        }
-    `;
-    
-    const escapeHTML = (str) => str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]);
-    
-    // Insertar header y footer (evitando duplicados)
-    let htmlConPaginas = contenidoMejorado;
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlConPaginas;
-    const primerasPaginas = tempDiv.querySelectorAll('.pagina');
-    if (primerasPaginas.length > 0) {
-        // Eliminar headers/footers existentes
-        primerasPaginas.forEach(pagina => {
-            const headerExistente = pagina.querySelector('.header-integrado');
-            const footerExistente = pagina.querySelector('.footer-integrado');
-            if (headerExistente) headerExistente.remove();
-            if (footerExistente) footerExistente.remove();
-        });
-        // Insertar header en la primera página
-        const primeraPagina = primerasPaginas[0];
-        const headerHtml = `<div class="header-integrado"><h1 class="documento-titulo">📄 ${escapeHTML(tituloPersonalizado)}</h1></div>`;
-        primeraPagina.insertAdjacentHTML('afterbegin', headerHtml);
-        // Insertar footer en la última página
-        const ultimaPagina = primerasPaginas[primerasPaginas.length - 1];
-        const footerHtml = `<div class="footer-integrado"><p>Documento generado con Conversor Word a HTML</p></div>`;
-        ultimaPagina.insertAdjacentHTML('beforeend', footerHtml);
-    }
-    htmlConPaginas = tempDiv.innerHTML;
-    
-    return `<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${escapeHTML(tituloPersonalizado)}</title>
-    <style>
-${cssExportado}
-    </style>
-</head>
-<body>
-    ${htmlConPaginas}
-</body>
-</html>`;
-}
-// ============================================================
-// EDITOR - FUNCIONES DE FORMATO (CON APLICACIÓN POR BLOQUES)
+// EDITOR - FUNCIONES DE FORMATO
 // ============================================================
 function obtenerContenidoEditable() {
     const vistaDiv = document.getElementById('vistaPrevia');
     return vistaDiv?.querySelector('.contenido-convertido');
 }
 
-// Mapeo de valores del select a píxeles
 const SIZE_MAP = {'1':'10px','2':'13px','3':'16px','4':'18px','5':'24px','6':'32px','7':'48px'};
 
-// Mostrar tamaño actual en píxeles (dentro del select o en un span)
 function actualizarSelectores() {
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
@@ -696,7 +836,6 @@ function actualizarSelectores() {
         fontElement = fontElement.parentElement;
     }
     const computedStyle = window.getComputedStyle(fontElement);
-    const fontFamily = computedStyle.fontFamily;
     const fontSizePx = computedStyle.fontSize;
     const fuenteSelect = document.getElementById('fuenteSelect');
     if (fuenteSelect) {
@@ -737,29 +876,6 @@ function actualizarSelectores() {
     actualizarBotonesActivos();
 }
 
-function estructurarContenido(htmlFragment) {
-    // Primero, procesar saltos de página (convierte divs con page-break en separadores)
-    let html = procesarSaltosPagina(htmlFragment);
-    
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    
-    // Si no hay ninguna página, envolver todo en una
-    if (!tempDiv.querySelector('.pagina')) {
-        const contenido = tempDiv.innerHTML;
-        tempDiv.innerHTML = `<div class="pagina">${contenido}</div>`;
-    }
-    
-    // Asegurar que las páginas tengan contenteditable="true" si es necesario (para edición)
-    tempDiv.querySelectorAll('.pagina').forEach(pag => {
-        if (!pag.hasAttribute('contenteditable')) {
-            pag.setAttribute('contenteditable', 'true');
-        }
-    });
-    
-    return tempDiv.innerHTML;
-}
-
 function actualizarBotonesActivos() {
     try {
         document.querySelectorAll('.tool-btn[data-cmd]').forEach(btn => {
@@ -773,7 +889,6 @@ function actualizarBotonesActivos() {
 
 document.addEventListener('selectionchange', () => { if (modoEdicion) actualizarSelectores(); });
 
-// Obtener todos los bloques (p, h1, h2, h3, h4, div, li, td, th) dentro del rango de selección
 function obtenerBloquesSeleccionados() {
     const selection = window.getSelection();
     if (!selection.rangeCount) return new Set();
@@ -805,9 +920,7 @@ function obtenerBloquesSeleccionados() {
     return bloques;
 }
 
-// Aplicar tamaño de fuente a todos los bloques seleccionados
 function aplicarTamañoAFuente(sizePx) {
-    // Restaurar la selección guardada si existe
     if (savedSelection) {
         const sel = window.getSelection();
         sel.removeAllRanges();
@@ -823,10 +936,9 @@ function aplicarTamañoAFuente(sizePx) {
     const range = selection.getRangeAt(0);
     
     if (range.collapsed) {
-        // No hay texto seleccionado: insertar un span vacío con el tamaño y dejar el cursor dentro
         const span = document.createElement('span');
         span.style.fontSize = sizePx;
-        span.innerHTML = '\u200B'; // carácter invisible
+        span.innerHTML = '\u200B';
         range.insertNode(span);
         const newRange = document.createRange();
         newRange.setStartAfter(span);
@@ -834,18 +946,15 @@ function aplicarTamañoAFuente(sizePx) {
         selection.removeAllRanges();
         selection.addRange(newRange);
     } else {
-        // Hay texto seleccionado: envolverlo en un span con el tamaño
         try {
             const span = document.createElement('span');
             span.style.fontSize = sizePx;
             range.surroundContents(span);
-            // Restaurar la selección dentro del span
             const newRange = document.createRange();
             newRange.selectNodeContents(span);
             selection.removeAllRanges();
             selection.addRange(newRange);
         } catch (e) {
-            // Si falla (selección no contigua), usar el método extractContents
             const span = document.createElement('span');
             span.style.fontSize = sizePx;
             const contenido = range.extractContents();
@@ -859,7 +968,6 @@ function aplicarTamañoAFuente(sizePx) {
     }
 }
 
-// Aplicar alineación a todos los bloques seleccionados
 function aplicarAlineacionTexto(align) {
     const selection = window.getSelection();
     const contenido = obtenerContenidoEditable();
@@ -869,14 +977,12 @@ function aplicarAlineacionTexto(align) {
 
     if (selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
-        // Si la selección está colapsada (solo cursor), obtener el bloque del cursor
         if (selection.isCollapsed) {
             let node = range.startContainer;
             if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
             let bloque = node.closest('p, h1, h2, h3, h4, h5, h6, div, li, td, th');
             if (bloque && bloque !== contenido) bloques.add(bloque);
         } else {
-            // Selección expandida: recorrer nodos elemento que intersectan el rango
             const walker = document.createTreeWalker(
                 range.commonAncestorContainer,
                 NodeFilter.SHOW_ELEMENT,
@@ -897,12 +1003,10 @@ function aplicarAlineacionTexto(align) {
     }
 
     if (bloques.size > 0) {
-        // Aplicar alineación a cada bloque
         bloques.forEach(bloque => {
             bloque.style.textAlign = align;
         });
     } else {
-        // Fallback: usar execCommand (útil para justificar cuando no se detecta bloque)
         try {
             let cmd = `justify${align.charAt(0).toUpperCase() + align.slice(1)}`;
             if (align === 'justify') cmd = 'justifyFull';
@@ -940,13 +1044,12 @@ function aplicarComando(cmd, valor = null) {
             document.execCommand('undo');
         } else if (cmd === 'redo') {
             document.execCommand('redo');
-        } else if (cmd === 'outdent' || cmd === 'indent') {
-            // tu lógica de sangría
         } else {
             document.execCommand(cmd, false, valor);
         }
         actualizarSelectores();
         actualizarBotonesActivos();
+        actualizarBotonZip();
     }, 5);
 }
 
@@ -954,10 +1057,7 @@ function obtenerBloqueActual() {
     const selection = window.getSelection();
     if (!selection.rangeCount) return null;
     let node = selection.getRangeAt(0).startContainer;
-    // Si es un nodo de texto, subimos al elemento padre
     if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-    // Buscamos cualquier elemento que pueda contener texto (p, div, h1-h6, etc.)
-    // Si no se encuentra, devolvemos el elemento actual (que podría ser un span)
     let bloque = node.closest('p, div, h1, h2, h3, h4, h5, h6, li, td, th, section, article');
     return bloque || node;
 }
@@ -965,7 +1065,6 @@ function obtenerBloqueActual() {
 function deshacerSangria() {
     console.log('Intentando deshacer sangría. Texto guardado:', ultimoBloqueSangriaTexto);
     
-    // Si no hay texto guardado, no se puede deshacer
     if (!ultimoBloqueSangriaTexto) {
         Swal.fire({ icon: 'info', title: 'Sin sangría previa', text: 'Aplica una sangría a un párrafo primero.', confirmButtonColor: '#3b82f6' });
         return;
@@ -976,13 +1075,11 @@ function deshacerSangria() {
     
     let bloqueEncontrado = null;
     
-    // 1. Buscar por referencia original (si sigue existiendo)
     if (ultimoBloqueSangria && document.body.contains(ultimoBloqueSangria) && contenido.contains(ultimoBloqueSangria)) {
         bloqueEncontrado = ultimoBloqueSangria;
         console.log('✅ Bloque encontrado por referencia original');
     }
     
-    // 2. Si no, buscar por el texto completo (contenido exacto)
     if (!bloqueEncontrado) {
         const todosLosBloques = contenido.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li, td, th, blockquote');
         for (let bloque of todosLosBloques) {
@@ -994,7 +1091,6 @@ function deshacerSangria() {
         }
     }
     
-    // 3. Si aún no, buscar por texto parcial (inicio)
     if (!bloqueEncontrado) {
         const todosLosBloques = contenido.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li, td, th, blockquote');
         for (let bloque of todosLosBloques) {
@@ -1008,10 +1104,8 @@ function deshacerSangria() {
     
     if (bloqueEncontrado && htmlAntesSangria) {
         try {
-            // Reemplazar el bloque actual por el HTML guardado
             bloqueEncontrado.outerHTML = htmlAntesSangria;
             Swal.fire({ icon: 'success', title: 'Sangría deshecha', timer: 1500, showConfirmButton: false });
-            // Limpiar las variables para evitar reaplicar la misma deshacer
             ultimoBloqueSangria = null;
             htmlAntesSangria = null;
             ultimoBloqueSangriaTexto = null;
@@ -1022,7 +1116,6 @@ function deshacerSangria() {
     } else {
         console.warn('No se encontró el bloque original');
         Swal.fire({ icon: 'info', title: 'No se encontró el bloque', text: 'No se pudo localizar el bloque original para deshacer la sangría.', confirmButtonColor: '#3b82f6' });
-        // Limpiar variables para evitar intentos repetidos
         ultimoBloqueSangria = null;
         htmlAntesSangria = null;
         ultimoBloqueSangriaTexto = null;
@@ -1038,7 +1131,6 @@ function insertarNuevaPagina() {
     
     const selection = window.getSelection();
     if (!selection.rangeCount || selection.isCollapsed === false && selection.toString().length === 0) {
-        // Si no hay selección válida o está vacía, no hacer nada
         Swal.fire({ icon: 'info', title: 'Posiciona el cursor', text: 'Coloca el cursor donde quieras dividir la página.', confirmButtonColor: '#3b82f6' });
         return;
     }
@@ -1047,13 +1139,11 @@ function insertarNuevaPagina() {
     const startContainer = range.startContainer;
     const startOffset = range.startOffset;
     
-    // Obtener la página actual que contiene el inicio de la selección
     let paginaActual = startContainer.nodeType === Node.TEXT_NODE 
         ? startContainer.parentElement.closest('.pagina')
         : startContainer.closest('.pagina');
     
     if (!paginaActual) {
-        // Si no hay página, crear una con todo el contenido y salir
         if (contenido.children.length === 0) return;
         const nuevaPagina = document.createElement('div');
         nuevaPagina.className = 'pagina';
@@ -1069,20 +1159,12 @@ function insertarNuevaPagina() {
         return;
     }
     
-    // Crear un rango que abarque desde el inicio de la página hasta el cursor
-    const rangoAntes = document.createRange();
-    rangoAntes.setStart(paginaActual, 0);
-    rangoAntes.setEnd(startContainer, startOffset);
-    
-    // Crear un rango que abarque desde el cursor hasta el final de la página
     const rangoDespues = document.createRange();
     rangoDespues.setStart(startContainer, startOffset);
     rangoDespues.setEnd(paginaActual, paginaActual.childNodes.length);
     
-    // Extraer el contenido después del cursor
     const fragmentoDespues = rangoDespues.extractContents();
     
-    // Crear nueva página vacía
     const nuevaPagina = document.createElement('div');
     nuevaPagina.className = 'pagina';
     nuevaPagina.contentEditable = 'true';
@@ -1092,20 +1174,16 @@ function insertarNuevaPagina() {
     nuevaPagina.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
     nuevaPagina.style.borderRadius = '8px';
     
-    // Añadir el fragmento después a la nueva página
     nuevaPagina.appendChild(fragmentoDespues);
     
-    // Si la nueva página quedó vacía, insertar un párrafo
     if (nuevaPagina.children.length === 0) {
         const p = document.createElement('p');
         p.innerHTML = '<br>';
         nuevaPagina.appendChild(p);
     }
     
-    // Insertar la nueva página después de la actual
     paginaActual.insertAdjacentElement('afterend', nuevaPagina);
     
-    // Mover el cursor al inicio de la nueva página
     const primerElemento = nuevaPagina.firstChild;
     const nuevoRango = document.createRange();
     if (primerElemento) {
@@ -1135,7 +1213,6 @@ function añadirPiePagina() {
         return;
     }
     
-    // Verificar si ya tiene pie de página
     if (pagina.querySelector('.pie-pagina')) {
         Swal.fire({ icon: 'info', title: 'Ya existe pie', text: 'Esta página ya tiene un pie de página.', confirmButtonColor: '#3b82f6' });
         return;
@@ -1183,11 +1260,11 @@ function cambiarFuente() {
     }
 }
 
-function cambiarTamaño() { const select = document.getElementById('tamanoSelect'); if (select) aplicarComando('fontSize', select.value); }
+function cambiarTamaño() { 
+    const select = document.getElementById('tamanoSelect'); 
+    if (select) aplicarComando('fontSize', select.value); 
+}
 
-// ============================================================
-// PALETA DE COLORES
-// ============================================================
 function aplicarColor() {
     const colorPicker = document.getElementById('colorPicker');
     if (!colorPicker) return;
@@ -1202,9 +1279,6 @@ function aplicarColor() {
     }
 }
 
-// ============================================================
-// ENLACES
-// ============================================================
 async function insertarEnlace() {
     const contenido = obtenerContenidoEditable();
     if (!contenido || contenido.contentEditable !== 'true') {
@@ -1232,9 +1306,6 @@ async function insertarEnlace() {
     }
 }
 
-// ============================================================
-// TABLAS - SIN SCROLL
-// ============================================================
 async function insertarTabla() {
     const contenido = obtenerContenidoEditable();
     if (!contenido || contenido.contentEditable !== 'true') {
@@ -1300,13 +1371,9 @@ async function insertarTabla() {
     if (nuevaTabla) {
         nuevaTabla.setAttribute('data-handled', 'false');
         añadirManejadoresTabla(nuevaTabla);
-        // NO se hace scroll
     }
 }
 
-// ============================================================
-// SELECCIÓN MÚLTIPLE DE CELDAS (sin cambios)
-// ============================================================
 function limpiarSeleccionCeldas() {
     celdasSeleccionadas.forEach(celda => celda.classList.remove('celda-seleccionada'));
     celdasSeleccionadas.clear();
@@ -1377,9 +1444,6 @@ function eliminarColumna() {
     limpiarSeleccionCeldas();
 }
 
-// ============================================================
-// REDIMENSIONAMIENTO DE TABLAS
-// ============================================================
 function iniciarRedimensionColumna(e, colIndex, table) {
     e.preventDefault();
     const startX = e.clientX;
@@ -1437,9 +1501,6 @@ function añadirManejadoresTabla(table) {
     }
 }
 
-// ============================================================
-// IMÁGENES (sin cambios relevantes)
-// ============================================================
 function insertarImagenManual() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -1455,7 +1516,11 @@ function insertarImagenManual() {
                 contenido.focus();
                 const imgHtml = `<img src="${base64}" class="nueva-imagen" style="max-width:100%; margin:1rem auto; display:block; border-radius:8px;" alt="Imagen insertada">`;
                 document.execCommand('insertHTML', false, imgHtml);
-                setTimeout(() => { const nuevaImg = contenido.querySelector('img:last-of-type'); if (nuevaImg) addDragHandlers(nuevaImg); }, 20);
+                setTimeout(() => { 
+                    const nuevaImg = contenido.querySelector('img:last-of-type'); 
+                    if (nuevaImg) addDragHandlers(nuevaImg);
+                    actualizarBotonZip();
+                }, 20);
             } else { Swal.fire({ icon: 'info', title: 'Modo edición requerido', text: 'Activa el modo edición antes de insertar imágenes.', confirmButtonColor: '#3b82f6' }); }
         };
         reader.readAsDataURL(file);
@@ -1500,14 +1565,14 @@ function habilitarDragAndDrop() {
                 const temp = document.createElement('div');
                 temp.innerHTML = html;
                 const img = temp.querySelector('img');
-                if (img) { range.insertNode(img); addDragHandlers(img); contenido.focus(); }
+                if (img) { range.insertNode(img); addDragHandlers(img); contenido.focus(); actualizarBotonZip(); }
             }
         }
     });
     contenido.querySelectorAll('img').forEach(addDragHandlers);
     if (observerImagenes) observerImagenes.disconnect();
     observerImagenes = new MutationObserver((mutations) => {
-        mutations.forEach(m => { m.addedNodes.forEach(node => { if (node.nodeType === 1 && node.tagName === 'IMG') addDragHandlers(node); if (node.nodeType === 1 && node.querySelectorAll) node.querySelectorAll('img').forEach(addDragHandlers); }); });
+        mutations.forEach(m => { m.addedNodes.forEach(node => { if (node.nodeType === 1 && node.tagName === 'IMG') addDragHandlers(node); if (node.nodeType === 1 && node.querySelectorAll) node.querySelectorAll('img').forEach(addDragHandlers); actualizarBotonZip(); }); });
     });
     observerImagenes.observe(contenido, { childList: true, subtree: true });
 }
@@ -1529,10 +1594,8 @@ function insertarIcono() {
         reader.onload = (ev) => {
             const base64 = ev.target.result;
             contenido.focus();
-            // Insertar icono con estilo inline-block y tamaño fijo
             const imgHtml = `<img src="${base64}" class="icono-insertado" style="display: inline-block; max-width: 32px; max-height: 32px; width: auto; height: auto; vertical-align: middle; margin: 0 2px;" alt="Icono">`;
             document.execCommand('insertHTML', false, imgHtml);
-            // Añadir manejadores
             const nuevoIcono = contenido.querySelector('img:last-of-type');
             if (nuevoIcono) {
                 addDragHandlers(nuevoIcono);
@@ -1544,6 +1607,7 @@ function insertarIcono() {
                     }
                 });
             }
+            actualizarBotonZip();
         };
         reader.readAsDataURL(file);
     };
@@ -1559,7 +1623,6 @@ function eliminarIconoCercano() {
     const range = selection.getRangeAt(0);
     let node = range.commonAncestorContainer;
     if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-    // Buscar si el nodo actual o su padre es un icono (img con clase icono-insertado)
     let icono = null;
     if (node.tagName === 'IMG' && node.classList.contains('icono-insertado')) {
         icono = node;
@@ -1570,13 +1633,12 @@ function eliminarIconoCercano() {
     if (icono) {
         icono.remove();
         Swal.fire({ icon: 'success', title: 'Icono eliminado', timer: 1200, showConfirmButton: false });
+        actualizarBotonZip();
     } else {
         Swal.fire({ icon: 'info', title: 'No se encontró icono', text: 'Asegúrate de tener el cursor cerca de un icono o selecciónalo.', confirmButtonColor: '#3b82f6' });
     }
 }
-// ============================================================
-// LOGOTIPO
-// ============================================================
+
 function anadirLogo() {
     const contenido = obtenerContenidoEditable();
     if (!contenido || contenido.contentEditable !== 'true') {
@@ -1594,10 +1656,8 @@ function anadirLogo() {
         reader.onload = (ev) => {
             const base64 = ev.target.result;
             contenido.focus();
-            // Insertar logo con estilo (similar a imagen pero con clase específica)
             const logoHtml = `<img src="${base64}" class="logo-revista" style="display: inline-block; max-width: 120px; margin: 0.5rem auto; vertical-align: middle;" alt="Logotipo">`;
             document.execCommand('insertHTML', false, logoHtml);
-            // Aplicar manejadores de arrastre y selección al nuevo logo
             const nuevoLogo = contenido.querySelector('.logo-revista:last-of-type');
             if (nuevoLogo) {
                 addDragHandlers(nuevoLogo);
@@ -1609,13 +1669,13 @@ function anadirLogo() {
                     }
                 });
             }
-            // Mostrar controles de tamaño/opacidad (como antes)
             document.getElementById('controlesLogo').style.display = 'flex';
             const logoActual = contenido.querySelector('.logo-revista:last-of-type');
             if (logoActual) {
                 document.getElementById('logoTamano').value = parseInt(logoActual.style.maxWidth) || 120;
                 document.getElementById('logoOpacidad').value = logoActual.style.opacity || 1;
             }
+            actualizarBotonZip();
         };
         reader.readAsDataURL(file);
     };
@@ -1632,11 +1692,8 @@ function aplicarControlesLogo() {
         if (opacidad) logo.style.opacity = opacidad;
     }
 }
-// ============================================================
-// MANEJAR PEGADO DE IMÁGENES DESDE PORTAPAPELES (CORRIGE REPETICIÓN)
-// ============================================================
+
 function manejarPegado(e) {
-    // Solo actuar si estamos en modo edición y el contenido es editable
     const contenido = obtenerContenidoEditable();
     if (!contenido || contenido.contentEditable !== 'true') return;
 
@@ -1646,15 +1703,13 @@ function manejarPegado(e) {
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
         if (item.type.indexOf('image') !== -1) {
-            // Hay una imagen en el portapapeles
             const blob = item.getAsFile();
             if (blob) {
-                e.preventDefault(); // Evitar el pegado por defecto del navegador
+                e.preventDefault();
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                     const base64 = ev.target.result;
                     contenido.focus();
-                    // Insertar imagen con estilos para que sea inline-block y redimensionable
                     const imgHtml = `<img src="${base64}" class="nueva-imagen" style="max-width:100%; display:block; margin:1rem auto; border-radius:8px;" alt="Imagen pegada">`;
                     document.execCommand('insertHTML', false, imgHtml);
                     const nuevaImg = contenido.querySelector('img:last-of-type');
@@ -1668,6 +1723,7 @@ function manejarPegado(e) {
                             }
                         });
                     }
+                    actualizarBotonZip();
                 };
                 reader.readAsDataURL(blob);
                 imagenEncontrada = true;
@@ -1676,26 +1732,14 @@ function manejarPegado(e) {
         }
     }
 
-    // Si no se encontró imagen, dejamos que el navegador pegue texto normalmente (no hacemos nada)
     if (!imagenEncontrada) {
-        // No prevenimos el evento, se pegará texto normal
         return;
     }
 }
-// ============================================================
-// OCULTAR ÁREA DE CARGA
-// ============================================================
+
 function ocultarAreaCarga(ocultar) {
     const uploadArea = document.querySelector('.upload-area');
     if (uploadArea) uploadArea.style.display = ocultar ? 'none' : 'block';
-}
-
-function cambiarTamaño() {
-    const select = document.getElementById('tamanoSelect');
-    if (select) {
-        guardarSeleccion(); // guardar antes de aplicar
-        aplicarComando('fontSize', select.value);
-    }
 }
 
 function aplicarFuenteConSpan(fontFamily) {
@@ -1743,9 +1787,107 @@ function aplicarFuenteConSpan(fontFamily) {
     }
 }
 
-// ============================================================
-// HABILITAR EDICIÓN (conecta todos los eventos)
-// ============================================================
+function crearResizers(img) {
+    eliminarResizers();
+    const container = img.parentElement;
+    if (container.style.position !== 'relative') container.style.position = 'relative';
+    
+    const resizerTL = document.createElement('div');
+    resizerTL.className = 'resizer-tl';
+    resizerTL.style.position = 'absolute';
+    resizerTL.style.top = '-5px';
+    resizerTL.style.left = '-5px';
+    resizerTL.style.width = '10px';
+    resizerTL.style.height = '10px';
+    resizerTL.style.backgroundColor = '#3b82f6';
+    resizerTL.style.borderRadius = '50%';
+    resizerTL.style.cursor = 'nw-resize';
+    resizerTL.style.zIndex = '1000';
+    
+    let startX, startY, startWidth, startHeight;
+    const startResize = (e, direction) => {
+        e.preventDefault();
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = img.offsetWidth;
+        startHeight = img.offsetHeight;
+        
+        const onMouseMove = (moveEvent) => {
+            const dx = moveEvent.clientX - startX;
+            const dy = moveEvent.clientY - startY;
+            let newWidth = startWidth;
+            let newHeight = startHeight;
+            if (direction === 'tl') {
+                newWidth = Math.max(50, startWidth - dx);
+                newHeight = Math.max(50, startHeight - dy);
+                img.style.width = newWidth + 'px';
+                img.style.height = newHeight + 'px';
+            } else if (direction === 'tr') {
+                newWidth = Math.max(50, startWidth + dx);
+                newHeight = Math.max(50, startHeight - dy);
+                img.style.width = newWidth + 'px';
+                img.style.height = newHeight + 'px';
+            } else if (direction === 'bl') {
+                newWidth = Math.max(50, startWidth - dx);
+                newHeight = Math.max(50, startHeight + dy);
+                img.style.width = newWidth + 'px';
+                img.style.height = newHeight + 'px';
+            } else if (direction === 'br') {
+                newWidth = Math.max(50, startWidth + dx);
+                newHeight = Math.max(50, startHeight + dy);
+                img.style.width = newWidth + 'px';
+                img.style.height = newHeight + 'px';
+            }
+        };
+        
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    };
+    
+    resizerTL.addEventListener('mousedown', (e) => startResize(e, 'tl'));
+    container.appendChild(resizerTL);
+    
+    const resizerTR = resizerTL.cloneNode();
+    resizerTR.className = 'resizer-tr';
+    resizerTR.style.left = 'auto';
+    resizerTR.style.right = '-5px';
+    resizerTR.style.cursor = 'ne-resize';
+    resizerTR.addEventListener('mousedown', (e) => startResize(e, 'tr'));
+    container.appendChild(resizerTR);
+    
+    const resizerBL = resizerTL.cloneNode();
+    resizerBL.className = 'resizer-bl';
+    resizerBL.style.top = 'auto';
+    resizerBL.style.bottom = '-5px';
+    resizerBL.style.cursor = 'sw-resize';
+    resizerBL.addEventListener('mousedown', (e) => startResize(e, 'bl'));
+    container.appendChild(resizerBL);
+    
+    const resizerBR = resizerTL.cloneNode();
+    resizerBR.className = 'resizer-br';
+    resizerBR.style.top = 'auto';
+    resizerBR.style.left = 'auto';
+    resizerBR.style.bottom = '-5px';
+    resizerBR.style.right = '-5px';
+    resizerBR.style.cursor = 'se-resize';
+    resizerBR.addEventListener('mousedown', (e) => startResize(e, 'br'));
+    container.appendChild(resizerBR);
+    
+    img._resizers = [resizerTL, resizerTR, resizerBL, resizerBR];
+}
+
+function eliminarResizers() {
+    if (imagenSeleccionada && imagenSeleccionada._resizers) {
+        imagenSeleccionada._resizers.forEach(r => r.remove());
+        imagenSeleccionada._resizers = [];
+    }
+}
+
 function habilitarEdicion() {
     const contenido = obtenerContenidoEditable();
     if (!contenido) return;
@@ -1761,33 +1903,30 @@ function habilitarEdicion() {
     document.getElementById('barraHerramientas').style.display = 'flex';
     inicializarPestanasBarra();
     document.querySelectorAll('.tool-btn[data-cmd]').forEach(btn => {
-    btn.onclick = (e) => {
-        e.preventDefault();
-        guardarSeleccion();   // <-- Añadir esta línea
-        const cmd = btn.getAttribute('data-cmd');
-        if (cmd && cmd.startsWith('justify')) {
-            if (!aplicarAlineacionImagen(cmd)) aplicarComando(cmd);
-        } else if (cmd) {
-            aplicarComando(cmd);
-        }
-    };
-});
+        btn.onclick = (e) => {
+            e.preventDefault();
+            guardarSeleccion();
+            const cmd = btn.getAttribute('data-cmd');
+            if (cmd && cmd.startsWith('justify')) {
+                if (!aplicarAlineacionImagen(cmd)) aplicarComando(cmd);
+            } else if (cmd) {
+                aplicarComando(cmd);
+            }
+            actualizarBotonZip();
+        };
+    });
     document.getElementById('fuenteSelect').onchange = cambiarFuente;
     const fuenteSelect = document.getElementById('fuenteSelect');
-if (fuenteSelect) {
-    fuenteSelect.addEventListener('mousedown', () => {
-        guardarSeleccion();
-    });
-    fuenteSelect.onchange = cambiarFuente;
-}
+    if (fuenteSelect) {
+        fuenteSelect.addEventListener('mousedown', () => { guardarSeleccion(); });
+        fuenteSelect.onchange = cambiarFuente;
+    }
     document.getElementById('tamanoSelect').onchange = cambiarTamaño;
     const tamanoSelect = document.getElementById('tamanoSelect');
-if (tamanoSelect) {
-    tamanoSelect.addEventListener('mousedown', () => {
-        guardarSeleccion();
-    });
-    tamanoSelect.onchange = cambiarTamaño; // ya lo tienes
-}
+    if (tamanoSelect) {
+        tamanoSelect.addEventListener('mousedown', () => { guardarSeleccion(); });
+        tamanoSelect.onchange = cambiarTamaño;
+    }
     document.getElementById('insertarImagenBtn').onclick = insertarImagenManual;
     document.getElementById('insertarTablaBtn').onclick = insertarTabla;
     document.getElementById('insertarEnlaceBtn').onclick = insertarEnlace;
@@ -1829,6 +1968,7 @@ if (tamanoSelect) {
     contenido.addEventListener('paste', manejarPegado);
     contenido.querySelectorAll('img').forEach(img => { img.addEventListener('click', (e) => { if (modoEdicion) { e.preventDefault(); e.stopPropagation(); seleccionarImagen(img); } }); });
     actualizarSelectores();
+    actualizarBotonZip();
 }
 
 function manejarAtajosTeclado(e) {
@@ -1853,7 +1993,6 @@ function manejarAtajosTeclado(e) {
                 actualizarBotonesActivos();
                 break;
             case 's':
-                // Para tachado (strikeThrough) si quieres atajo
                 if (e.shiftKey) {
                     e.preventDefault();
                     document.execCommand('strikeThrough');
@@ -1877,18 +2016,15 @@ function manejarAtajosTeclado(e) {
     }
 }
 
-// Obtener los párrafos de referencias seleccionados o todos los que tengan clase .referencia
 function obtenerReferenciasSeleccionadas() {
     const selection = window.getSelection();
     let referencias = [];
 
-    // 1. Si hay selección de texto, obtener los párrafos (o elementos de bloque) completos que están total o parcialmente dentro del rango
     if (selection.rangeCount && !selection.isCollapsed) {
         const range = selection.getRangeAt(0);
         const contenido = obtenerContenidoEditable();
         if (!contenido) return [];
         
-        // Obtener todos los párrafos del documento
         const todosLosParrafos = contenido.querySelectorAll('p, div.referencia, .referencia');
         for (let p of todosLosParrafos) {
             if (range.intersectsNode(p)) {
@@ -1896,18 +2032,15 @@ function obtenerReferenciasSeleccionadas() {
             }
         }
         if (referencias.length === 0) {
-            // Si no se encontró ningún párrafo, intentar con el elemento más cercano
             let node = range.commonAncestorContainer;
             if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
             let bloque = node.closest('p, div');
             if (bloque) referencias.push(bloque);
         }
     } else {
-        // 2. Sin selección: buscar elementos con clase .referencia
         referencias = Array.from(document.querySelectorAll('.contenido-convertido .referencia, .contenido-convertido p'));
     }
 
-    // Si aún no hay referencias, mostrar mensaje y devolver vacío
     if (referencias.length === 0) {
         Swal.fire('No hay referencias', 'Selecciona el texto que deseas formatear como referencia o asegúrate de que el documento contenga párrafos con el formato [1] o 1. al inicio.', 'info');
         return [];
@@ -1950,9 +2083,7 @@ function numerarReferencias() {
     }
     referencias.forEach((p, idx) => {
         let texto = p.innerHTML;
-        // Eliminar numeración existente al principio (si la hay)
         texto = texto.replace(/^\s*(\[\d+\]|\d+\.)\s*/, '');
-        // Insertar nueva numeración
         p.innerHTML = `${idx+1}. ${texto}`;
     });
 }
@@ -1995,6 +2126,7 @@ function guardarEdicion() {
     observerTablas = null;
     contenido.removeEventListener('keydown', manejarAtajosTeclado);
     contenido.removeEventListener('paste', manejarPegado);
+    actualizarBotonZip();
     Swal.fire({ icon: 'success', title: 'Cambios guardados', text: 'El documento se ha actualizado.', confirmButtonColor: '#059669', timer: 2000, showConfirmButton: false });
 }
 
@@ -2101,7 +2233,6 @@ async function insertarLineaDecorativa() {
         preConfirm: () => {
             const estilo = document.getElementById('linea-estilo').value;
             let grosor = parseInt(document.getElementById('linea-grosor').value);
-            // Asegurar grosor mínimo para estilos que lo necesitan
             if ((estilo === 'double' || estilo === 'groove' || estilo === 'ridge') && grosor < 3) {
                 grosor = 3;
             }
@@ -2117,8 +2248,6 @@ async function insertarLineaDecorativa() {
 
     if (!formValues) return;
 
-    // Construir la línea con border-top para todos los estilos (así es más universal)
-    // Para sólido, además podemos añadir border-radius si se desea (opcional)
     const borderRadius = (formValues.estilo === 'solid') ? `border-radius: ${formValues.grosor}px;` : '';
     const lineaHtml = `<hr class="linea-decorativa" style="
         display: block;
@@ -2140,7 +2269,6 @@ function eliminarLineaCercana() {
         return;
     }
     
-    // 1. Obtener la selección actual
     const selection = window.getSelection();
     let elementoAEliminar = null;
     
@@ -2148,14 +2276,12 @@ function eliminarLineaCercana() {
         const range = selection.getRangeAt(0);
         let node = range.commonAncestorContainer;
         if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-        // Verificar si el elemento seleccionado es una línea (o está dentro de una)
         elementoAEliminar = node.closest('.linea-decorativa');
         if (!elementoAEliminar && node.tagName === 'HR' && node.classList.contains('linea-decorativa')) {
             elementoAEliminar = node;
         }
     }
     
-    // 2. Si no se encontró en la selección, buscar la línea más cercana al cursor
     if (!elementoAEliminar && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
@@ -2170,9 +2296,7 @@ function eliminarLineaCercana() {
         }
     }
     
-    // 3. Si aún no, buscar en el contenido cualquier línea y eliminarla (peligroso, mejor preguntar)
     if (!elementoAEliminar) {
-        // Buscar la primera línea en el contenido
         const primeraLinea = contenido.querySelector('.linea-decorativa');
         if (primeraLinea) {
             Swal.fire({
@@ -2195,14 +2319,10 @@ function eliminarLineaCercana() {
         }
     }
     
-    // Eliminar la línea encontrada
     elementoAEliminar.remove();
     Swal.fire({ icon: 'success', title: 'Línea eliminada', timer: 1200, showConfirmButton: false });
 }
 
-// ============================================================
-// CARGAR HTML EXPORTADO DIRECTAMENTE A EDICIÓN
-// ============================================================
 function cargarHtmlDesdeArchivo() {
     const input = document.getElementById('inputHtml');
     if (input) input.click();
@@ -2221,11 +2341,9 @@ function procesarArchivoHtml(event) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(contenidoHtmlCompleto, 'text/html');
         
-        // Extraer el contenido principal (páginas o body)
         let contenidoExtraido = null;
         const paginas = doc.querySelectorAll('.pagina');
         if (paginas.length > 0) {
-            // Eliminar headers y footers de todas las páginas
             paginas.forEach(pagina => {
                 const headerExistente = pagina.querySelector('.header-integrado');
                 const footerExistente = pagina.querySelector('.footer-integrado');
@@ -2234,7 +2352,6 @@ function procesarArchivoHtml(event) {
             });
             contenidoExtraido = Array.from(paginas).map(p => p.outerHTML).join('');
         } else {
-            // Si no hay páginas, tomar el body y eliminar headers/footers externos
             const bodyClone = doc.body.cloneNode(true);
             bodyClone.querySelectorAll('.documento-header, .documento-footer, .header-integrado, .footer-integrado').forEach(el => el.remove());
             contenidoExtraido = bodyClone.innerHTML;
@@ -2245,7 +2362,6 @@ function procesarArchivoHtml(event) {
             return;
         }
         
-        // Aplicar estructura de páginas
         const htmlEstructurado = estructurarContenido(contenidoExtraido);
         
         const vistaDiv = document.getElementById('vistaPrevia');
@@ -2264,144 +2380,6 @@ function procesarArchivoHtml(event) {
     reader.readAsText(file);
 }
 
-function configurarDescarga() {
-    const descargarBtn = document.getElementById('descargarBtn');
-    if (!descargarBtn) return;
-    
-    descargarBtn.onclick = async () => {
-        // Si estamos en modo edición, preguntar si guardar cambios
-        if (modoEdicion) {
-            const result = await Swal.fire({
-                title: '¿Guardar cambios?',
-                text: 'Estás en modo edición. ¿Guardar antes de descargar?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#059669',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sí, guardar',
-                cancelButtonText: 'No, descargar sin guardar'
-            });
-            if (result.isConfirmed) guardarEdicion();
-        }
-        
-        // Obtener el contenido final (el que se está viendo en el editor)
-        const finalHtml = obtenerContenidoEditable()?.innerHTML || htmlActual;
-        let nombreArchivoSalida = document.getElementById('nombreArchivo').value.trim();
-        if (nombreArchivoSalida === '') {
-            // Si no hay nombre, usar "documento_editado"
-            nombreArchivoSalida = 'documento_editado';
-        }
-        
-        const blob = new Blob([generarDocumentoCompleto(finalHtml, nombreArchivoSalida)], { type: 'text/html;charset=utf-8' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = nombreArchivoSalida + '.html';
-        a.click();
-        URL.revokeObjectURL(a.href);
-        
-        Swal.fire({
-            icon: 'success',
-            title: 'Descarga completada',
-            text: `Archivo guardado como ${nombreArchivoSalida}.html`,
-            confirmButtonColor: '#059669',
-            timer: 2000,
-            showConfirmButton: false
-        });
-    };
-}
-// ============================================================
-// EVENTO PRINCIPAL
-// ============================================================
-document.addEventListener('DOMContentLoaded', function() {
-    // Configurar el botón de descarga de forma global (funciona siempre)
-    configurarDescarga();
-
-    const convertirBtn = document.getElementById('convertirBtn');
-    const fileInput = document.getElementById('inputWord');
-    const resultadoDiv = document.getElementById('resultado');
-    initDragAndDrop();
-    const selectBtn = document.getElementById('seleccionarArchivoBtn');
-    const fileNameSpan = document.getElementById('nombreArchivoSeleccionado');
-    if (selectBtn && fileInput && fileNameSpan) {
-        selectBtn.addEventListener('click', () => {
-            fileInput.click();
-        });
-        fileInput.addEventListener('change', (e) => {
-            if (fileInput.files.length > 0) {
-                fileNameSpan.textContent = fileInput.files[0].name;
-            } else {
-                fileNameSpan.textContent = 'Ningún archivo seleccionado';
-            }
-        });
-    }
-
-    // Asignar evento al botón "Editar HTML"
-    const editarHtmlBtn = document.getElementById('editarHtmlBtn');
-    const inputHtml = document.getElementById('inputHtml');
-    if (editarHtmlBtn && inputHtml) {
-        editarHtmlBtn.addEventListener('click', cargarHtmlDesdeArchivo);
-        inputHtml.addEventListener('change', procesarArchivoHtml);
-    }
-// Atajo de teclado F1
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'F1') {
-        e.preventDefault();
-        abrirManual();
-    }
-});
-
-    document.getElementById('editarBtn').addEventListener('click', habilitarEdicion);
-    document.getElementById('guardarEdicionBtn').addEventListener('click', guardarEdicion);
-
-    convertirBtn.addEventListener('click', function() {
-        if (!fileInput.files.length) {
-            Swal.fire({ icon: 'warning', title: 'Sin archivo', text: 'Selecciona un archivo .docx', confirmButtonColor: '#f59e0b' });
-            return;
-        }
-        const archivo = fileInput.files[0];
-        if (!/\.docx$/i.test(archivo.name)) {
-            Swal.fire({ icon: 'error', title: 'Formato incorrecto', text: 'El archivo debe ser .docx', confirmButtonColor: '#ef4444' });
-            return;
-        }
-        const nombreInput = document.getElementById('nombreArchivo');
-        if (nombreInput) nombreInput.value = archivo.name.replace(/\.docx$/i, '');
-
-        convertirBtn.disabled = true;
-        convertirBtn.innerHTML = '<span class="btn-icon">⏳</span> Convirtiendo...';
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            mammoth.convertToHtml({ arrayBuffer: e.target.result }, {
-                convertImage: crearConvertidorImagenes(),
-                styleMap: ["p[style-name='Heading 1'] => h1", "p[style-name='Heading 2'] => h2"]
-            }).then(result => {
-                let htmlMejorado = mejorarEstructuraHTML(result.value);
-                htmlActual = htmlMejorado;
-                const vistaDiv = document.getElementById('vistaPrevia');
-                vistaDiv.innerHTML = `<div class="contenido-convertido">${htmlMejorado}</div>`;
-                resultadoDiv.style.display = 'block';
-                resultadoDiv.scrollIntoView({ behavior: 'smooth' });
-
-                // Ya no redefinimos descargarBtn.onclick aquí, porque configurarDescarga ya lo hizo globalmente
-
-                convertirBtn.disabled = false;
-                convertirBtn.innerHTML = '<span class="btn-icon">⚡</span> Convertir a HTML';
-            }).catch(err => {
-                console.error(err);
-                Swal.fire({ icon: 'error', title: 'Error en conversión', text: err.message, confirmButtonColor: '#ef4444' });
-                convertirBtn.disabled = false;
-                convertirBtn.innerHTML = '<span class="btn-icon">⚡</span> Convertir a HTML';
-            });
-        };
-        reader.readAsArrayBuffer(archivo);
-    });
-});
-
-function abrirManual() {
-    window.open('manual.html', '_blank');
-}
-// ============================================================
-// RECUADRO CON SweetAlert2 (sin cambios)
-// ============================================================
 async function aplicarRecuadroConModal() {
     const selection = window.getSelection();
     if (!selection.rangeCount || selection.isCollapsed) {
@@ -2511,3 +2489,91 @@ function quitarRecuadro() {
         Swal.fire({ icon: 'info', title: 'No hay recuadro', text: 'Selecciona un texto que ya tenga recuadro.', confirmButtonColor: '#3b82f6' });
     }
 }
+
+function abrirManual() {
+    window.open('manual.html', '_blank');
+}
+
+// ============================================================
+// EVENTO PRINCIPAL
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    configurarDescarga();
+
+    const convertirBtn = document.getElementById('convertirBtn');
+    const fileInput = document.getElementById('inputWord');
+    const resultadoDiv = document.getElementById('resultado');
+    initDragAndDrop();
+    const selectBtn = document.getElementById('seleccionarArchivoBtn');
+    const fileNameSpan = document.getElementById('nombreArchivoSeleccionado');
+    if (selectBtn && fileInput && fileNameSpan) {
+        selectBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (fileInput.files.length > 0) {
+                fileNameSpan.textContent = fileInput.files[0].name;
+            } else {
+                fileNameSpan.textContent = 'Ningún archivo seleccionado';
+            }
+        });
+    }
+
+    const editarHtmlBtn = document.getElementById('editarHtmlBtn');
+    const inputHtml = document.getElementById('inputHtml');
+    if (editarHtmlBtn && inputHtml) {
+        editarHtmlBtn.addEventListener('click', cargarHtmlDesdeArchivo);
+        inputHtml.addEventListener('change', procesarArchivoHtml);
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F1') {
+            e.preventDefault();
+            abrirManual();
+        }
+    });
+
+    document.getElementById('editarBtn').addEventListener('click', habilitarEdicion);
+    document.getElementById('guardarEdicionBtn').addEventListener('click', guardarEdicion);
+
+    convertirBtn.addEventListener('click', function() {
+        if (!fileInput.files.length) {
+            Swal.fire({ icon: 'warning', title: 'Sin archivo', text: 'Selecciona un archivo .docx', confirmButtonColor: '#f59e0b' });
+            return;
+        }
+        const archivo = fileInput.files[0];
+        if (!/\.docx$/i.test(archivo.name)) {
+            Swal.fire({ icon: 'error', title: 'Formato incorrecto', text: 'El archivo debe ser .docx', confirmButtonColor: '#ef4444' });
+            return;
+        }
+        const nombreInput = document.getElementById('nombreArchivo');
+        if (nombreInput) nombreInput.value = archivo.name.replace(/\.docx$/i, '');
+
+        convertirBtn.disabled = true;
+        convertirBtn.innerHTML = '<span class="btn-icon">⏳</span> Convirtiendo...';
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            mammoth.convertToHtml({ arrayBuffer: e.target.result }, {
+                convertImage: crearConvertidorImagenes(),
+                styleMap: ["p[style-name='Heading 1'] => h1", "p[style-name='Heading 2'] => h2"]
+            }).then(result => {
+                let htmlMejorado = mejorarEstructuraHTML(result.value);
+                htmlActual = htmlMejorado;
+                const vistaDiv = document.getElementById('vistaPrevia');
+                vistaDiv.innerHTML = `<div class="contenido-convertido">${htmlMejorado}</div>`;
+                resultadoDiv.style.display = 'block';
+                resultadoDiv.scrollIntoView({ behavior: 'smooth' });
+                actualizarBotonZip();
+
+                convertirBtn.disabled = false;
+                convertirBtn.innerHTML = '<span class="btn-icon">⚡</span> Convertir a HTML';
+            }).catch(err => {
+                console.error(err);
+                Swal.fire({ icon: 'error', title: 'Error en conversión', text: err.message, confirmButtonColor: '#ef4444' });
+                convertirBtn.disabled = false;
+                convertirBtn.innerHTML = '<span class="btn-icon">⚡</span> Convertir a HTML';
+            });
+        };
+        reader.readAsArrayBuffer(archivo);
+    });
+});
