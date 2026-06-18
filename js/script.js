@@ -432,30 +432,48 @@ async function configurarDescarga() {
 }
 
 // ============================================================
-// FUNCIÓN PARA DETECTAR IMÁGENES Y MOSTRAR BOTÓN ZIP
+// FUNCIÓN PARA DETECTAR IMÁGENES Y MOSTRAR BOTÓN ZIP (MEJORADA)
 // ============================================================
 function actualizarBotonZip() {
-    const contenido = obtenerContenidoEditable();
     const descargarZipBtn = document.getElementById('descargarZipBtn');
     if (!descargarZipBtn) return;
     
+    // Buscar el contenido en la vista previa
+    const vistaDiv = document.getElementById('vistaPrevia');
+    const contenido = vistaDiv?.querySelector('.contenido-convertido');
+    
     if (contenido) {
         const imagenes = contenido.querySelectorAll('img');
+        // Verificar si hay al menos una imagen en base64
         const hayImagenesBase64 = Array.from(imagenes).some(img => {
             const src = img.getAttribute('src');
             return src && src.startsWith('data:image');
         });
         
+        // Mostrar el botón si hay imágenes base64 O si el documento está visible
         if (imagenes.length > 0 && hayImagenesBase64) {
             descargarZipBtn.style.display = 'inline-flex';
+            console.log('✅ Botón ZIP visible: hay imágenes base64');
         } else {
-            descargarZipBtn.style.display = 'none';
+            // También mostrar si hay imágenes con rutas relativas (para HTMLs editados)
+            const hayImagenesRelativas = Array.from(imagenes).some(img => {
+                const src = img.getAttribute('src');
+                return src && !src.startsWith('data:') && !src.startsWith('http');
+            });
+            
+            if (imagenes.length > 0 && hayImagenesRelativas) {
+                descargarZipBtn.style.display = 'inline-flex';
+                console.log('✅ Botón ZIP visible: hay imágenes con rutas relativas');
+            } else {
+                descargarZipBtn.style.display = 'none';
+                console.log('❌ Botón ZIP oculto: no hay imágenes para empaquetar');
+            }
         }
     } else {
         descargarZipBtn.style.display = 'none';
+        console.log('❌ Botón ZIP oculto: no hay contenido');
     }
 }
-
 // ============================================================
 // UTILIDADES DE SELECCIÓN
 // ============================================================
@@ -2371,6 +2389,7 @@ function procesarArchivoHtml(event) {
             ocultarAreaCarga(true);
             document.getElementById('resultado').style.display = 'block';
             habilitarEdicion();
+            actualizarBotonZip();
         }
         event.target.value = '';
     };
