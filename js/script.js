@@ -1,5 +1,5 @@
 // ============================================================
-// CONVERSOR WORD A HTML - VERSIÓN CON EXPORTACIÓN DE IMÁGENES
+// CONVERSOR WORD A HTML - VERSIÓN CON RUST365
 // ============================================================
 
 let modoEdicion = false;
@@ -14,6 +14,76 @@ let htmlAntesSangria = null;
 let ultimoBloqueSangriaTexto = null;
 let contadorImagenesGlobal = 0;
 
+// ============================================================
+// CONFIGURACIÓN DE RUST365 - URL DINÁMICA (DEBE IR AL PRINCIPIO)
+// ============================================================
+
+// Detectar si estamos en producción (GitHub Pages) o local
+const isProduction = window.location.hostname !== 'localhost' && 
+                     window.location.hostname !== '127.0.0.1' &&
+                     !window.location.hostname.includes('192.168');
+
+// Configura la URL de tu servidor en Render
+// CAMBIA ESTA URL POR LA DE TU SERVIDOR EN RENDER
+const RUST_SERVER_URL = isProduction 
+    ? 'https://rust365-conversor.onrender.com'  // <--- ¡CAMBIA ESTO!
+    : 'http://localhost:3000';
+
+console.log(`🌐 Entorno: ${isProduction ? 'Producción (GitHub Pages)' : 'Local'}`);
+console.log(`🌐 Servidor rust365: ${RUST_SERVER_URL}`);
+
+// Verificar si rust365 está disponible
+async function verificarRust365() {
+    try {
+        const response = await fetch(`${RUST_SERVER_URL}/api/verificar-rust`, {
+            signal: AbortSignal.timeout(5000)
+        });
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('❌ Error al verificar rust365:', error);
+        return { installed: false, error: error.message };
+    }
+}
+
+// Convertir usando rust365
+async function convertirConRust365(arrayBuffer, nombreArchivo) {
+    const blob = new Blob([arrayBuffer], { 
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' 
+    });
+    
+    const formData = new FormData();
+    formData.append('archivo', blob, nombreArchivo);
+    
+    try {
+        const response = await fetch(`${RUST_SERVER_URL}/api/convertir-rust`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error en la conversión');
+        }
+        
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('❌ Error al llamar a rust365:', error);
+        throw error;
+    }
+}
+
+// Extraer solo el contenido del body del HTML generado por rust365
+function extraerContenidoRust365(htmlCompleto) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlCompleto;
+    const body = tempDiv.querySelector('body');
+    if (body) {
+        return body.innerHTML;
+    }
+    return htmlCompleto;
+}
 // ============================================================
 // NUEVAS FUNCIONES PARA MANEJO DE IMÁGENES Y ZIP
 // ============================================================
@@ -225,6 +295,21 @@ function generarDocumentoCompletoConImagenes(contenidoMejorado, tituloPersonaliz
         }
         .tabla-con-bordes tr:nth-child(even) td {
             background-color: #fafafa;
+        }
+         
+        .pagina a {
+            cursor: pointer !important;
+            color: #2563eb;
+            text-decoration: underline;
+            transition: color 0.2s ease;
+        }
+        
+        .pagina a:hover {
+            color: #1d4ed8;
+        }
+        
+        .contenido-convertido a {
+            cursor: pointer !important;
         }
 
         .pagina img:not(.icono-insertado) {
@@ -474,6 +559,7 @@ function actualizarBotonZip() {
         console.log('❌ Botón ZIP oculto: no hay contenido');
     }
 }
+
 // ============================================================
 // UTILIDADES DE SELECCIÓN
 // ============================================================
@@ -501,32 +587,6 @@ function obtenerRangoActual() {
         return range;
     }
     return null;
-}
-
-// ============================================================
-// MANEJADOR DE IMÁGENES
-// ============================================================
-function crearConvertidorImagenes() {
-    return mammoth.images.imgElement(function(image) {
-        return image.readAsBase64String()
-            .then(function(base64String) {
-                console.log(`✅ Imagen convertida: ${image.contentType}`);
-                return {
-                    src: `data:${image.contentType};base64,${base64String}`,
-                    alt: "Imagen del documento",
-                    class: "imagen-convertida",
-                    style: "max-width:100%; height:auto; display:block; margin:1rem auto;"
-                };
-            })
-            .catch(function(err) {
-                console.error(`❌ Error en imagen: ${err.message}`);
-                return {
-                    src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='150' viewBox='0 0 200 150'%3E%3Crect width='200' height='150' fill='%23f1f5f9' stroke='%2394a3b8' stroke-width='2' stroke-dasharray='6'/%3E%3Ctext x='50%25' y='50%25' font-size='12' text-anchor='middle' fill='%2364748b'%3EImagen no disponible%3C/text%3E%3C/svg%3E",
-                    alt: "Imagen no disponible",
-                    style: "max-width:100%; margin:0.5em auto; display:block;"
-                };
-            });
-    });
 }
 
 // ============================================================
@@ -1303,27 +1363,152 @@ async function insertarEnlace() {
         Swal.fire({ icon: 'warning', title: 'Modo edición requerido', text: 'Activa el modo edición primero', confirmButtonColor: '#f59e0b' });
         return;
     }
+    
     const selection = window.getSelection();
     const textoSeleccionado = selection.toString();
+    let rangoSeleccion = null;
+    if (selection.rangeCount > 0) {
+        rangoSeleccion = selection.getRangeAt(0).cloneRange();
+    }
+    
+    let elementoReferencia = null;
+    if (rangoSeleccion) {
+        let nodo = rangoSeleccion.startContainer;
+        if (nodo.nodeType === Node.TEXT_NODE) {
+            nodo = nodo.parentElement;
+        }
+        elementoReferencia = nodo.closest('p, div, h1, h2, h3, h4, h5, h6, li, td, th, span');
+        if (!elementoReferencia) elementoReferencia = nodo;
+    }
+    
     const { value: url } = await Swal.fire({
         title: 'Insertar enlace',
         input: 'url',
         inputLabel: 'URL del enlace',
         inputPlaceholder: 'https://ejemplo.com',
-        inputValue: textoSeleccionado.match(/^https?:\/\//) ? textoSeleccionado : '',
+        inputValue: '',
         showCancelButton: true,
         confirmButtonText: 'Insertar',
         confirmButtonColor: '#2563eb',
         cancelButtonText: 'Cancelar'
     });
-    if (url) {
-        contenido.focus();
-        if (textoSeleccionado && !textoSeleccionado.match(/^https?:\/\//))
-            document.execCommand('createLink', false, url);
-        else document.execCommand('insertHTML', false, `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
+    
+    if (!url) return;
+    
+    const scrollY = window.scrollY;
+    const scrollX = window.scrollX;
+    contenido.focus();
+    
+    if (rangoSeleccion) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(rangoSeleccion);
+    }
+    
+    if (textoSeleccionado && textoSeleccionado.trim().length > 0) {
+        const textoBuscar = textoSeleccionado.trim();
+        document.execCommand('createLink', false, url);
+        setTimeout(() => {
+            const todosLosEnlaces = contenido.querySelectorAll('a');
+            let enlaceCreado = null;
+            for (let enlace of todosLosEnlaces) {
+                if (enlace.textContent.trim() === textoBuscar) {
+                    enlaceCreado = enlace;
+                    break;
+                }
+            }
+            if (!enlaceCreado && todosLosEnlaces.length > 0) {
+                enlaceCreado = todosLosEnlaces[todosLosEnlaces.length - 1];
+            }
+            if (enlaceCreado) {
+                enlaceCreado.setAttribute('target', '_blank');
+                enlaceCreado.setAttribute('rel', 'noopener noreferrer');
+                const range = document.createRange();
+                range.selectNodeContents(enlaceCreado);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                if (enlaceCreado.scrollIntoView) {
+                    enlaceCreado.scrollIntoView({ block: 'center', behavior: 'instant' });
+                }
+                contenido.focus();
+                setTimeout(() => {
+                    window.scrollTo(scrollX, scrollY);
+                    contenido.focus();
+                }, 0);
+            }
+        }, 0);
+    } else {
+        const enlaceHtml = `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+        document.execCommand('insertHTML', false, enlaceHtml);
+        setTimeout(() => {
+            const todosLosEnlaces = contenido.querySelectorAll('a');
+            if (todosLosEnlaces.length > 0) {
+                const ultimoEnlace = todosLosEnlaces[todosLosEnlaces.length - 1];
+                const sel = window.getSelection();
+                const range = document.createRange();
+                range.setStartAfter(ultimoEnlace);
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
+                contenido.focus();
+                window.scrollTo(scrollX, scrollY);
+            }
+        }, 0);
+    }
+    
+    actualizarSelectores();
+    actualizarBotonesActivos();
+}
+
+function agregarEstilosEnlaces() {
+    if (document.getElementById('estilos-enlaces')) return;
+    const style = document.createElement('style');
+    style.id = 'estilos-enlaces';
+    style.textContent = `
+        .contenido-convertido a {
+            cursor: pointer !important;
+            color: #2563eb;
+            text-decoration: underline;
+            transition: color 0.2s ease;
+        }
+        .contenido-convertido a:hover {
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
+        .contenido-convertido[contenteditable="true"] a {
+            cursor: pointer !important;
+        }
+        .pagina a {
+            cursor: pointer !important;
+            color: #2563eb;
+            text-decoration: underline;
+        }
+        .pagina a:hover {
+            color: #1d4ed8;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// ============================================================
+// FUNCIONES PARA MANEJAR CLICS EN ENLACES
+// ============================================================
+function manejarClicEnEnlace(e) {
+    const enlace = e.target.closest('a');
+    if (!enlace) return;
+    if (modoEdicion) return;
+    const href = enlace.getAttribute('href');
+    if (href && href !== '#' && !href.startsWith('javascript:')) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(href, '_blank', 'noopener,noreferrer');
     }
 }
 
+// ============================================================
+// FUNCIONES DE TABLAS
+// ============================================================
 async function insertarTabla() {
     const contenido = obtenerContenidoEditable();
     if (!contenido || contenido.contentEditable !== 'true') {
@@ -1519,6 +1704,9 @@ function añadirManejadoresTabla(table) {
     }
 }
 
+// ============================================================
+// FUNCIONES DE IMÁGENES
+// ============================================================
 function insertarImagenManual() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -1554,7 +1742,6 @@ function seleccionarImagen(img) {
     imagenSeleccionada = img;
     img.classList.add('img-seleccionada');
     crearResizers(img);
-    
     const selection = window.getSelection();
     const range = document.createRange();
     range.selectNode(img);
@@ -1906,7 +2093,11 @@ function eliminarResizers() {
     }
 }
 
+// ============================================================
+// HABILITAR EDICIÓN
+// ============================================================
 function habilitarEdicion() {
+    agregarEstilosEnlaces();
     const contenido = obtenerContenidoEditable();
     if (!contenido) return;
     contenido.contentEditable = 'true';
@@ -1984,11 +2175,15 @@ function habilitarEdicion() {
     observerTablas.observe(contenido, { childList: true, subtree: true });
     contenido.addEventListener('keydown', manejarAtajosTeclado);
     contenido.addEventListener('paste', manejarPegado);
+    contenido.addEventListener('click', manejarClicEnEnlace);
     contenido.querySelectorAll('img').forEach(img => { img.addEventListener('click', (e) => { if (modoEdicion) { e.preventDefault(); e.stopPropagation(); seleccionarImagen(img); } }); });
     actualizarSelectores();
     actualizarBotonZip();
 }
 
+// ============================================================
+// ATAJOS DE TECLADO
+// ============================================================
 function manejarAtajosTeclado(e) {
     if (e.ctrlKey || e.metaKey) {
         switch(e.key.toLowerCase()) {
@@ -2034,6 +2229,9 @@ function manejarAtajosTeclado(e) {
     }
 }
 
+// ============================================================
+// REFERENCIAS BIBLIOGRÁFICAS
+// ============================================================
 function obtenerReferenciasSeleccionadas() {
     const selection = window.getSelection();
     let referencias = [];
@@ -2122,6 +2320,9 @@ function aplicarEstiloAPA() {
     });
 }
 
+// ============================================================
+// GUARDAR EDICIÓN
+// ============================================================
 function guardarEdicion() {
     const contenido = obtenerContenidoEditable();
     if (!contenido) return;
@@ -2144,10 +2345,14 @@ function guardarEdicion() {
     observerTablas = null;
     contenido.removeEventListener('keydown', manejarAtajosTeclado);
     contenido.removeEventListener('paste', manejarPegado);
+    contenido.removeEventListener('click', manejarClicEnEnlace);
     actualizarBotonZip();
     Swal.fire({ icon: 'success', title: 'Cambios guardados', text: 'El documento se ha actualizado.', confirmButtonColor: '#059669', timer: 2000, showConfirmButton: false });
 }
 
+// ============================================================
+// PESTAÑAS DE LA BARRA
+// ============================================================
 function inicializarPestanasBarra() {
     const tabs = document.querySelectorAll('.tab-btn-toolbar');
     const contents = document.querySelectorAll('.tab-content-toolbar');
@@ -2163,6 +2368,9 @@ function inicializarPestanasBarra() {
     });
 }
 
+// ============================================================
+// LÍNEAS DECORATIVAS
+// ============================================================
 async function insertarLineaDecorativa() {
     const contenido = obtenerContenidoEditable();
     if (!contenido || contenido.contentEditable !== 'true') {
@@ -2341,6 +2549,9 @@ function eliminarLineaCercana() {
     Swal.fire({ icon: 'success', title: 'Línea eliminada', timer: 1200, showConfirmButton: false });
 }
 
+// ============================================================
+// CARGAR HTML DESDE ARCHIVO
+// ============================================================
 function cargarHtmlDesdeArchivo() {
     const input = document.getElementById('inputHtml');
     if (input) input.click();
@@ -2399,6 +2610,9 @@ function procesarArchivoHtml(event) {
     reader.readAsText(file);
 }
 
+// ============================================================
+// RECUADROS
+// ============================================================
 async function aplicarRecuadroConModal() {
     const selection = window.getSelection();
     if (!selection.rangeCount || selection.isCollapsed) {
@@ -2514,7 +2728,110 @@ function abrirManual() {
 }
 
 // ============================================================
-// EVENTO PRINCIPAL
+// FUNCIÓN PARA ACTUALIZAR ESTADO DE RUST365 (DEBE IR AL FINAL)
+// ============================================================
+async function actualizarEstadoRust() {
+    const statusSpan = document.getElementById('rustStatus');
+    if (!statusSpan) return;
+    
+    statusSpan.textContent = '⏳ Verificando...';
+    statusSpan.style.color = '#64748b';
+    statusSpan.style.backgroundColor = '#f1f5f9';
+    
+    try {
+        const estado = await verificarRust365();
+        
+        if (estado.installed) {
+            statusSpan.textContent = `✅ rust365 ${estado.version || ''}`;
+            statusSpan.style.color = '#059669';
+            statusSpan.style.backgroundColor = '#ecfdf5';
+        } else {
+            statusSpan.textContent = '❌ rust365 no disponible';
+            statusSpan.style.color = '#dc2626';
+            statusSpan.style.backgroundColor = '#fef2f2';
+            console.warn('⚠️ rust365 no está disponible:', estado.error);
+        }
+    } catch (error) {
+        console.warn('⚠️ No se pudo verificar rust365:', error);
+        statusSpan.textContent = '⚠️ Servidor no disponible';
+        statusSpan.style.color = '#d97706';
+        statusSpan.style.backgroundColor = '#fffbeb';
+    }
+}
+
+// ============================================================
+// FUNCIONES DE ZOOM (DEBEN IR AL FINAL)
+// ============================================================
+
+let zoomActual = 1.0;
+const ZOOM_STEP = 0.05;
+const ZOOM_MIN = 0.3;
+const ZOOM_MAX = 3.0;
+
+function aplicarZoom(factor) {
+    const contenido = document.querySelector('.contenido-convertido');
+    if (!contenido) return;
+    
+    zoomActual = Math.min(Math.max(zoomActual + factor, ZOOM_MIN), ZOOM_MAX);
+    contenido.style.transform = `scale(${zoomActual})`;
+    contenido.style.transformOrigin = 'top left';
+    contenido.style.width = `${100 / zoomActual}%`;
+    
+    const zoomLevel = document.getElementById('zoomLevel');
+    if (zoomLevel) {
+        zoomLevel.textContent = `${Math.round(zoomActual * 100)}%`;
+    }
+}
+
+function resetearZoom() {
+    zoomActual = 1.0;
+    const contenido = document.querySelector('.contenido-convertido');
+    if (!contenido) return;
+    contenido.style.transform = 'scale(1)';
+    contenido.style.transformOrigin = 'top left';
+    contenido.style.width = '100%';
+    const zoomLevel = document.getElementById('zoomLevel');
+    if (zoomLevel) {
+        zoomLevel.textContent = '100%';
+    }
+}
+
+function manejarZoomRueda(e) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+    aplicarZoom(delta);
+}
+
+function configurarZoom() {
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const zoomResetBtn = document.getElementById('zoomResetBtn');
+    
+    if (zoomInBtn) zoomInBtn.addEventListener('click', () => aplicarZoom(ZOOM_STEP));
+    if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => aplicarZoom(-ZOOM_STEP));
+    if (zoomResetBtn) zoomResetBtn.addEventListener('click', resetearZoom);
+    
+    document.addEventListener('wheel', manejarZoomRueda, { passive: false });
+    
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+            e.preventDefault();
+            resetearZoom();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === '=') {
+            e.preventDefault();
+            aplicarZoom(ZOOM_STEP);
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+            e.preventDefault();
+            aplicarZoom(-ZOOM_STEP);
+        }
+    });
+}
+
+// ============================================================
+// EVENTO PRINCIPAL - DOMContentLoaded (DEBE IR AL FINAL)
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     configurarDescarga();
@@ -2555,7 +2872,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('editarBtn').addEventListener('click', habilitarEdicion);
     document.getElementById('guardarEdicionBtn').addEventListener('click', guardarEdicion);
 
-    convertirBtn.addEventListener('click', function() {
+    // Configurar zoom
+    configurarZoom();
+
+    // ============================================================
+    // CONVERSIÓN CON RUST365 - EVENTO PRINCIPAL
+    // ============================================================
+    convertirBtn.addEventListener('click', async function() {
         if (!fileInput.files.length) {
             Swal.fire({ icon: 'warning', title: 'Sin archivo', text: 'Selecciona un archivo .docx', confirmButtonColor: '#f59e0b' });
             return;
@@ -2569,30 +2892,56 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nombreInput) nombreInput.value = archivo.name.replace(/\.docx$/i, '');
 
         convertirBtn.disabled = true;
-        convertirBtn.innerHTML = '<span class="btn-icon">⏳</span> Convirtiendo...';
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            mammoth.convertToHtml({ arrayBuffer: e.target.result }, {
-                convertImage: crearConvertidorImagenes(),
-                styleMap: ["p[style-name='Heading 1'] => h1", "p[style-name='Heading 2'] => h2"]
-            }).then(result => {
-                let htmlMejorado = mejorarEstructuraHTML(result.value);
-                htmlActual = htmlMejorado;
-                const vistaDiv = document.getElementById('vistaPrevia');
-                vistaDiv.innerHTML = `<div class="contenido-convertido">${htmlMejorado}</div>`;
-                resultadoDiv.style.display = 'block';
-                resultadoDiv.scrollIntoView({ behavior: 'smooth' });
-                actualizarBotonZip();
+        convertirBtn.innerHTML = '<span class="btn-icon">⏳</span> Convirtiendo con rust365...';
 
-                convertirBtn.disabled = false;
-                convertirBtn.innerHTML = '<span class="btn-icon">⚡</span> Convertir a HTML';
-            }).catch(err => {
-                console.error(err);
-                Swal.fire({ icon: 'error', title: 'Error en conversión', text: err.message, confirmButtonColor: '#ef4444' });
-                convertirBtn.disabled = false;
-                convertirBtn.innerHTML = '<span class="btn-icon">⚡</span> Convertir a HTML';
+        try {
+            const arrayBuffer = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = () => reject(new Error('Error al leer el archivo'));
+                reader.readAsArrayBuffer(archivo);
             });
-        };
-        reader.readAsArrayBuffer(archivo);
+
+            const resultado = await convertirConRust365(arrayBuffer, archivo.name);
+            const contenidoHtml = extraerContenidoRust365(resultado.html);
+            const htmlMejorado = mejorarEstructuraHTML(contenidoHtml);
+            
+            htmlActual = htmlMejorado;
+            const vistaDiv = document.getElementById('vistaPrevia');
+            vistaDiv.innerHTML = `<div class="contenido-convertido">${htmlMejorado}</div>`;
+            resultadoDiv.style.display = 'block';
+            resultadoDiv.scrollIntoView({ behavior: 'smooth' });
+            actualizarBotonZip();
+
+            if (resultado.warnings) {
+                console.warn('Advertencias de rust365:', resultado.warnings);
+            }
+
+            convertirBtn.disabled = false;
+            convertirBtn.innerHTML = '<span class="btn-icon">⚡</span> Convertir a HTML';
+            
+            Swal.fire({
+                icon: 'success',
+                title: '✅ Conversión completada',
+                text: 'Documento convertido correctamente con rust365',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+        } catch (error) {
+            console.error('❌ Error en conversión:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error en conversión',
+                text: error.message || 'Ocurrió un error inesperado',
+                confirmButtonColor: '#ef4444'
+            });
+            convertirBtn.disabled = false;
+            convertirBtn.innerHTML = '<span class="btn-icon">⚡</span> Convertir a HTML';
+        }
     });
+
+    // Verificar estado de rust365 al cargar
+    actualizarEstadoRust();
+    setInterval(actualizarEstadoRust, 30000);
 });
