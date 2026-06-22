@@ -1,6 +1,23 @@
 services:
   - type: web
     name: conversor-bltx
-    runtime: docker
+    runtime: node
     plan: free
-    dockerfilePath: ./Dockerfile
+    buildCommand: |
+      echo "🚀 Instalando Rust..."
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      export PATH="$HOME/.cargo/bin:$PATH"
+      echo "📦 Instalando rust365..."
+      cargo install rust365
+      echo "📦 Instalando dependencias Node..."
+      npm install
+    startCommand: |
+      export PATH="$HOME/.cargo/bin:$PATH"
+      node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: PATH
+        value: /opt/render/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
