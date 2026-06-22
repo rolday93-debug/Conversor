@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Configurar multer para subir archivos
+// Configurar multer
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadDir = path.join(__dirname, 'uploads');
@@ -42,7 +42,7 @@ const upload = multer({
     limits: { fileSize: 50 * 1024 * 1024 }
 });
 
-// Verificar si rust365 está disponible
+// Verificar rust365
 app.get('/api/verificar-rust', (req, res) => {
     try {
         const { execSync } = require('child_process');
@@ -61,7 +61,7 @@ app.get('/api/verificar-rust', (req, res) => {
     }
 });
 
-// Endpoint para convertir con rust365
+// Endpoint de conversión
 app.post('/api/convertir-rust', upload.single('archivo'), async (req, res) => {
     let archivoPath = null;
     let outputFile = null;
@@ -99,7 +99,6 @@ app.post('/api/convertir-rust', upload.single('archivo'), async (req, res) => {
                 errorMsg = stderr || error.message;
             }
             
-            // Limpiar archivos temporales
             try {
                 if (archivoPath && fs.existsSync(archivoPath)) {
                     fs.unlinkSync(archivoPath);
