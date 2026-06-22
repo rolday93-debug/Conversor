@@ -1,7 +1,7 @@
-// server.js - VERSIÓN PARA LA NUBE
+// server.js - VERSIÓN PARA RENDER CON INSTALACIÓN AUTOMÁTICA DE RUST365
 const express = require('express');
 const multer = require('multer');
-const { exec } = require('child_process');
+const { exec, execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
@@ -13,6 +13,44 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// ============================================================
+// INSTALAR RUST365 AUTOMÁTICAMENTE AL INICIAR
+// ============================================================
+console.log('🔧 Verificando e instalando rust365...');
+
+function instalarRust365() {
+    try {
+        // Verificar si rust365 ya está instalado
+        try {
+            const version = execSync('rust365 --version', { encoding: 'utf8' });
+            console.log(`✅ rust365 ya está instalado: ${version.trim()}`);
+            return true;
+        } catch (e) {
+            console.log('📦 rust365 no encontrado. Instalando...');
+        }
+
+        // Instalar rust365 usando cargo
+        console.log('⬇️ Descargando e instalando rust365...');
+        execSync('cargo install rust365', { 
+            encoding: 'utf8', 
+            stdio: 'inherit',
+            timeout: 300000 // 5 minutos
+        });
+        
+        console.log('✅ rust365 instalado correctamente');
+        return true;
+    } catch (error) {
+        console.error('❌ Error al instalar rust365:', error);
+        return false;
+    }
+}
+
+// Instalar rust365 al iniciar (en segundo plano para no bloquear)
+let rust365Instalado = false;
+setTimeout(() => {
+    rust365Instalado = instalarRust365();
+}, 1000);
 
 // Configurar multer para subir archivos
 const storage = multer.diskStorage({
@@ -43,15 +81,43 @@ const upload = multer({
     limits: { fileSize: 50 * 1024 * 1024 }
 });
 
-// Verificar si rust365 está instalado
+// Verificar si rust365 está disponible (con instalación automática)
 app.get('/api/verificar-rust', (req, res) => {
-    // En la nube, rust365 debe estar preinstalado en el contenedor
-    // Por ahora, asumimos que está disponible
-    res.json({ 
-        installed: true, 
-        version: 'cloud-v1.0.0',
-        environment: process.env.NODE_ENV || 'production'
-    });
+    // Verificar si rust365 está disponible
+    try {
+        const version = execSync('rust365 --version', { encoding: 'utf8' });
+        res.json({ 
+            installed: true, 
+            version: version.trim(),
+            environment: process.env.NODE_ENV || 'production'
+        });
+    } catch (error) {
+        // Si no está instalado, intentar instalarlo
+        console.log('⚠️ rust365 no encontrado, intentando instalar...');
+        const instalado = instalarRust365();
+        if (instalado) {
+            try {
+                const version = execSync('rust365 --version', { encoding: 'utf8' });
+                res.json({ 
+                    installed: true, 
+                    version: version.trim(),
+                    environment: process.env.NODE_ENV || 'production'
+                });
+            } catch (e) {
+                res.json({ 
+                    installed: false, 
+                    error: 'Error al instalar rust365',
+                    details: e.message
+                });
+            }
+        } else {
+            res.json({ 
+                installed: false, 
+                error: 'rust365 no disponible',
+                details: error.message
+            });
+        }
+    }
 });
 
 // Endpoint para convertir con rust365
@@ -74,7 +140,15 @@ app.post('/api/convertir-rust', upload.single('archivo'), async (req, res) => {
         
         outputFile = path.join(outputDir, `${nombreBase}_${Date.now()}.html`);
         
-        // Usar rust365 - en la nube debe estar en el PATH
+        // Verificar que rust365 esté instalado antes de convertir
+        try {
+            execSync('rust365 --version', { encoding: 'utf8' });
+        } catch (e) {
+            console.log('⚠️ rust365 no encontrado, instalando...');
+            instalarRust365();
+        }
+        
+        // Ejecutar rust365
         const command = `rust365 "${archivoPath}" -o "${outputFile}"`;
         console.log('🔧 Ejecutando:', command);
         
@@ -139,11 +213,12 @@ app.get('/api/health', (req, res) => {
     res.json({ 
         status: 'ok', 
         timestamp: new Date().toISOString(),
-        uptime: process.uptime()
+        uptime: process.uptime(),
+        rust365: rust365Instalado ? 'instalado' : 'verificando...'
     });
 });
 
-// Ruta raíz para verificar que el servidor está activo
+// Ruta raíz
 app.get('/', (req, res) => {
     res.json({ 
         message: '🦀 rust365 API server is running!',
@@ -156,8 +231,8 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Servidor rust365 en https://localhost:${PORT}`);
-    console.log(`📝 Verificar estado: https://localhost:${PORT}/api/verificar-rust`);
-    console.log(`📄 Convertir: POST https://localhost:${PORT}/api/convertir-rust`);
+    console.log(`🚀 Servidor rust365 en puerto ${PORT}`);
+    console.log(`📝 Verificar estado: /api/verificar-rust`);
+    console.log(`📄 Convertir: POST /api/convertir-rust`);
     console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
 });

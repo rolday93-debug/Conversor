@@ -26,7 +26,7 @@ const isProduction = window.location.hostname !== 'localhost' &&
 // Configura la URL de tu servidor en Render
 // CAMBIA ESTA URL POR LA DE TU SERVIDOR EN RENDER
 const RUST_SERVER_URL = isProduction 
-    ? 'https://rust365-conversor.onrender.com'  // <--- ¡CAMBIA ESTO!
+    ? 'https://conversor-bltx.onrender.com'  // <--- ¡CAMBIA ESTO!
     : 'http://localhost:3000';
 
 console.log(`🌐 Entorno: ${isProduction ? 'Producción (GitHub Pages)' : 'Local'}`);

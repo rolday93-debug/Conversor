@@ -1,12 +1,18 @@
 services:
   - type: web
-    name: rust365-conversor
+    name: conversor-bltx
     runtime: node
     plan: free
-    buildCommand: npm install
+    buildCommand: |
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      source $HOME/.cargo/env
+      cargo install rust365
+      npm install
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
+      - key: PATH
+        value: /opt/render/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
